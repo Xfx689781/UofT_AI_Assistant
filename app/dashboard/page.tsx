@@ -296,7 +296,7 @@ export default function DashboardPage() {
             )}
 
             {/* Professor Lens */}
-            <ProfessorSearch studentProfile={profile} allowedCourses={allCourseCodes} />
+            <ProfessorSearch studentProfile={profile} />
 
           </div>
 
