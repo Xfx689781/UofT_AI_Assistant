@@ -3,27 +3,60 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getOnboardingData } from '@/components/Onboarding'
+import { getOnboardingData, type OnboardingData } from '@/components/Onboarding'
 import Chat from '@/components/Chat'
 import ProfessorCard from '@/components/ProfessorCard'
 import { PROFESSORS } from '@/lib/data'
 
+function getDisplayProgram(profile: OnboardingData): string {
+  if (profile.yearType === 'first') {
+    return profile.admissionCategory || 'First year'
+  }
+  if (profile.programOfStudy && profile.programOfStudy !== '__other__') {
+    return profile.programType ? `${profile.programOfStudy} (${profile.programType})` : profile.programOfStudy
+  }
+  return profile.programOther || 'Second year+'
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [name, setName] = useState('')
-  const [program, setProgram] = useState('')
+  const [profile, setProfile] = useState<OnboardingData | null>(null)
+  const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null)
+  const [welcomeLoading, setWelcomeLoading] = useState(true)
+  const [welcomeError, setWelcomeError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
     const data = getOnboardingData()
-    if (!data?.name || !data?.program) {
+    if (!data?.name) {
       router.replace('/')
       return
     }
-    setName(data.name)
-    setProgram(data.program)
+    if (!data.learningStyle) {
+      router.replace('/')
+      return
+    }
+    setProfile(data)
   }, [router])
+
+  useEffect(() => {
+    if (!profile?.name) return
+    setWelcomeLoading(true)
+    setWelcomeError(null)
+    fetch('/api/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.message) setWelcomeMessage(json.message)
+        else setWelcomeError(json.error || 'Could not load welcome message')
+      })
+      .catch(() => setWelcomeError('Failed to load welcome message'))
+      .finally(() => setWelcomeLoading(false))
+  }, [profile?.name])
 
   if (!mounted) {
     return (
@@ -33,6 +66,8 @@ export default function DashboardPage() {
     )
   }
 
+  const displayProgram = profile ? getDisplayProgram(profile) : ''
+
   return (
     <div className="min-h-screen bg-[#0a0e14]">
       <header className="border-b border-[#1e2a3a] bg-[#121922]/80 backdrop-blur">
@@ -41,7 +76,7 @@ export default function DashboardPage() {
             UofT AI Assistant
           </Link>
           <span className="text-sm text-[#8b9aad]">
-            {name} · {program}
+            {profile?.name ?? ''} · {displayProgram}
           </span>
         </div>
       </header>
@@ -50,12 +85,20 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
-              <h1 className="text-2xl font-bold text-white mb-1">
-                Welcome back, {name || 'Student'}!
+              <h1 className="text-2xl font-bold text-white mb-2">
+                Welcome back, {profile?.name ?? 'Student'}!
               </h1>
-              <p className="text-[#8b9aad]">
-                Here’s your dashboard. Use the assistant on the right for course and professor help.
-              </p>
+              {welcomeLoading && (
+                <p className="text-[#8b9aad] animate-pulse">Generating your personalized message...</p>
+              )}
+              {welcomeError && !welcomeMessage && (
+                <p className="text-[#8b9aad]">
+                  Here&apos;s your dashboard. Use the assistant on the right for course and professor help.
+                </p>
+              )}
+              {welcomeMessage && (
+                <p className="text-[#c8d4e0] leading-relaxed">{welcomeMessage}</p>
+              )}
             </section>
 
             <section>
