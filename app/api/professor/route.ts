@@ -79,8 +79,7 @@ Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return thi
 
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      console.error('Raw response:', raw)
-      return NextResponse.json({ error: 'Could not parse response', raw }, { status: 500 })
+      return NextResponse.json({ error: 'Could not parse response', raw, cleaned }, { status: 500 })
     }
 
     try {
