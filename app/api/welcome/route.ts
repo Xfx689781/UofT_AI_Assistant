@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
+    const openrouterKey = process.env.OPENROUTER_API_KEY
+    const tavilyKey = process.env.TAVILY_API_KEY
+    if (!openrouterKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
+    if (!tavilyKey) return NextResponse.json({ error: 'TAVILY_API_KEY not configured' }, { status: 500 })
 
     const profile = await req.json()
     if (!profile?.name) return NextResponse.json({ error: 'Invalid profile' }, { status: 400 })
@@ -11,10 +13,44 @@ export async function POST(req: Request) {
     const program = profile.programOfStudy && profile.programOfStudy !== '__other__'
       ? profile.programOfStudy : profile.programOther || profile.admissionCategory
 
+    // Step 1: Search real UofT program requirements
+    const searches = await Promise.all([
+      fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: tavilyKey,
+          query: `"${program}" requirements courses artsci.calendar.utoronto.ca`,
+          search_depth: 'advanced',
+          max_results: 5,
+        }),
+      }).then(r => r.json()),
+      fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: tavilyKey,
+          query: `UofT ${program} prerequisite course list degree requirements`,
+          search_depth: 'advanced',
+          max_results: 5,
+        }),
+      }).then(r => r.json()),
+    ])
+
+    const context = searches
+      .flatMap(s => s.results || [])
+      .map((r: { url: string; content: string }) => `[${r.url}]\n${r.content}`)
+      .join('\n\n')
+
+    const currentYear = profile.yearType === 'first' ? 1 :
+      profile.yearType === 'second+' ? 2 : 1
+
+    const completedCourses = profile.coursesCompleted || profile.coursesTaken || []
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${openrouterKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://uof-t-ai-assistant.vercel.app',
         'X-Title': 'UofT AI Assistant',
@@ -25,41 +61,62 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: 'You are a UofT academic advisor. You must respond with only a valid JSON object.',
+            content: `You are a UofT academic advisor. Use the search results to generate an ACCURATE course plan.
+CRITICAL RULES:
+- Use ONLY real UofT course codes found in search results or well-known UofT courses
+- Prerequisites MUST be accurate (e.g. MAT237 requires MAT137, MAT240 requires MAT137)
+- Label semesters as "First Year Fall", "First Year Winter", "Second Year Fall", etc. NOT by calendar year
+- Max 5 courses per semester, aim for 4-5
+- Never put a course before its prerequisites are completed
+- Required courses must match the actual program requirements from search results`,
           },
           {
             role: 'user',
-            content: `Generate a complete degree plan for this UofT student from NOW until graduation (all remaining semesters up to 4th year).
+            content: `Generate complete degree plan for this UofT student.
 
 Student:
 - Name: ${profile.name}
 - Program: ${program}
-- Year: ${profile.yearType}
-- Completed courses: ${JSON.stringify(profile.coursesCompleted || profile.coursesTaken || [])}
+- Currently in: Year ${currentYear}
+- Completed courses: ${JSON.stringify(completedCourses)}
 - Goals: ${profile.goalsSecondYear || profile.goalsFirstYear || 'not specified'}
-- Learning style: ${profile.learningStyle || 'not specified'}
+- Learning style: ${profile.learningStyle}
 
-IMPORTANT:
-- Generate ALL semesters from next semester until graduation (typically 6-8 semesters total)
-- Each course must include workload (hours per week as a number 1-15)
-- Each course must include prerequisites list
-- Each semester must include totalWorkload (sum of all course workloads)
-- Respect prerequisites strictly
-- Required courses first, then electives based on goals
-- Max 5 courses per semester
+REAL PROGRAM DATA FROM UOFT CALENDAR:
+${context}
+
+KNOWN UOFT PREREQUISITES (use these):
+- MAT237: requires MAT137 (or MAT157)
+- MAT240: requires MAT137
+- MAT247: requires MAT240
+- MAT257: requires MAT157
+- MAT301: requires MAT240
+- MAT315: requires MAT246 or MAT240
+- MAT334: requires MAT237
+- MAT337: requires MAT237 and MAT246
+- MAT357: requires MAT257
+- STA237: requires MAT135 or MAT137
+- STA238: requires STA237
+- STA347: requires MAT237 and STA238
+- CSC148: requires CSC108
+- CSC207: requires CSC148
+- CSC236: requires CSC148
+
+Generate plan starting from Year ${currentYear}, semester by semester until graduation.
+Each semester should be labeled "First Year Fall/Winter", "Second Year Fall/Winter", etc.
 
 Return this JSON:
 {
   "message": "warm 2-3 sentence welcome for ${profile.name} with one specific tip",
   "courseSchedule": [
     {
-      "semester": "Fall 2026",
-      "totalWorkload": 42,
+      "semester": "Second Year Fall",
+      "totalWorkload": 38,
       "courses": [
         {
           "code": "MAT237",
           "name": "Multivariable Calculus",
-          "reason": "Required for your program",
+          "reason": "Core requirement for ${program}",
           "type": "required",
           "workload": 10,
           "prerequisites": ["MAT137"]
@@ -68,10 +125,10 @@ Return this JSON:
     }
   ],
   "degreeProgress": {
-    "completedCredits": 2,
+    "completedCredits": ${completedCourses.length * 0.5},
     "requiredCredits": 20,
-    "remainingRequired": ["MAT237", "MAT246", "MAT301"],
-    "nextMilestone": "Complete MAT237 to unlock upper-year math"
+    "remainingRequired": ["MAT237", "MAT240", "MAT246"],
+    "nextMilestone": "Complete first year calculus and linear algebra to unlock upper year courses"
   }
 }`,
           },
