@@ -305,4 +305,6 @@ export function ProfessorSearch({
       const json = await res.json()
       if (json.error) setError(json.error)
       else setData(json)
-    } cat
+    } catch {
+      setError('Failed to load professor data')
+    }
