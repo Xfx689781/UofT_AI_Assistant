@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getOnboardingData } from '@/components/Onboarding'
+import Onboarding, { getOnboardingData } from '@/components/Onboarding'
 
 export default function LandingPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [hasProfile, setHasProfile] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [name, setName] = useState('')
 
   useEffect(() => {
     setMounted(true)
     const existing = getOnboardingData()
-    if (existing?.name) {
+    if (existing?.name && existing?.learningStyle) {
       setHasProfile(true)
       setName(existing.name)
     }
@@ -25,6 +26,10 @@ export default function LandingPage() {
         <div className="animate-pulse text-[#8b9aad]">Loading...</div>
       </div>
     )
+  }
+
+  if (showOnboarding) {
+    return <Onboarding onComplete={() => router.push('/dashboard')} />
   }
 
   return (
@@ -53,39 +58,30 @@ export default function LandingPage() {
           <div className="bg-[#121922] rounded-xl border border-[#1e2a3a] p-6 shadow-inner">
             <p className="text-sm text-[#8b9aad] mb-4">
               {hasProfile
-                ? `Welcome back, ${name}. Choose how you want to continue.`
+                ? `Welcome back, ${name}!`
                 : 'Get started with a quick profile to unlock personalized guidance.'}
             </p>
             <div className="space-y-3">
               {hasProfile && (
                 <button
                   type="button"
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push('/dashboard')}
                   className="w-full px-4 py-2.5 rounded-lg bg-[#0066CC] text-white font-medium hover:bg-[#0080e6] transition-colors"
                 >
-                  Log In as {name}
+                  Continue as {name}
                 </button>
               )}
               <button
                 type="button"
-                onClick={() => router.push('/signup')}
+                onClick={() => setShowOnboarding(true)}
                 className={`w-full px-4 py-2.5 rounded-lg border font-medium transition-colors ${
                   hasProfile
                     ? 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/70 hover:bg-[#002A5C]/30'
                     : 'border-[#0066CC] bg-[#0066CC] text-white hover:bg-[#0080e6]'
                 }`}
               >
-                {hasProfile ? 'Use a different profile' : 'Sign Up'}
+                {hasProfile ? 'Start over with new profile' : 'Sign Up'}
               </button>
-              {hasProfile && (
-                <button
-                  type="button"
-                  onClick={() => router.push('/dashboard')}
-                  className="w-full text-xs text-[#6b7a8d] hover:text-[#c8d4e0] underline underline-offset-4 mt-1"
-                >
-                  Skip to dashboard
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -93,4 +89,3 @@ export default function LandingPage() {
     </div>
   )
 }
-
