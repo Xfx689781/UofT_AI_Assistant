@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server'
 
-// UofT program calendar URLs
-const PROGRAM_URLS: Record<string, string> = {
+const PROGRAM_CALENDAR_URLS: Record<string, string> = {
   'Mathematics Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1165',
   'Mathematics Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1165',
   'Mathematics Minor': 'https://artsci.calendar.utoronto.ca/program/asmin1165',
   'Applied Mathematics Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1196',
   'Mathematics & Physics Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1312',
-  'Mathematics & Philosophy Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1309',
   'Statistical Sciences Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1169',
   'Statistics Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1169',
-  'Statistics Minor': 'https://artsci.calendar.utoronto.ca/program/asmin1169',
   'Data Science Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1697',
   'Computer Science Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1689',
   'Computer Science Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1689',
@@ -21,7 +18,21 @@ const PROGRAM_URLS: Record<string, string> = {
   'Sociology Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1435',
   'Human Biology Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1213',
   'Neuroscience Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1216',
-  'Life Sciences': 'https://artsci.calendar.utoronto.ca/section/Life-Sciences',
+}
+
+interface Course {
+  code: string
+  name: string
+  reason: string
+  type: string
+  workload: number
+  prerequisites: string[]
+}
+
+interface Semester {
+  semester: string
+  totalWorkload: number
+  courses: Course[]
 }
 
 export async function POST(req: Request) {
@@ -36,34 +47,33 @@ export async function POST(req: Request) {
 
     const program = profile.programOfStudy && profile.programOfStudy !== '__other__'
       ? profile.programOfStudy : profile.programOther || profile.admissionCategory
-    const completed = profile.coursesCompleted || profile.coursesTaken || []
+    const completed: string[] = profile.coursesCompleted || profile.coursesTaken || []
     const goals = profile.goalsSecondYear || profile.goalsFirstYear || ''
-
-    // Step 1: Get real program requirements from UofT calendar
-    const programUrl = PROGRAM_URLS[program]
-    let programData = ''
-
-    if (programUrl) {
-      // Fetch directly from UofT calendar
-      const calendarRes = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: tavilyKey,
-          query: `${program} required courses prerequisites UofT artsci calendar`,
-          search_depth: 'advanced',
-          include_domains: ['artsci.calendar.utoronto.ca'],
-          max_results: 5,
-        }),
-      }).then(r => r.json())
-
-      programData = (calendarRes.results || [])
-        .map((r: { url: string; content: string }) => `[${r.url}]\n${r.content}`)
-        .join('\n\n')
-    }
-
-    // Step 2: Generate plan with AI using real data
     const startYear = profile.yearType === 'first' ? 1 : 2
+
+    // Normalize completed courses for filtering
+    const completedSet = new Set(completed.map(c => c.toUpperCase().replace(/\s/g, '')))
+
+    // Step 1: Fetch real program requirements from UofT calendar
+    const calendarUrl = PROGRAM_CALENDAR_URLS[program]
+    const searchResults = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: tavilyKey,
+        query: `${program} required courses prerequisites credits`,
+        search_depth: 'advanced',
+        include_domains: ['artsci.calendar.utoronto.ca'],
+        ...(calendarUrl ? { include_urls: [calendarUrl] } : {}),
+        max_results: 5,
+      }),
+    }).then(r => r.json())
+
+    const programContext = (searchResults.results || [])
+      .map((r: { url: string; content: string }) => `[${r.url}]\n${r.content}`)
+      .join('\n\n')
+
+    // Step 2: Generate plan with AI
     const semesters = [
       'First Year Fall', 'First Year Winter',
       'Second Year Fall', 'Second Year Winter',
@@ -86,57 +96,27 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert UofT academic advisor. Use the REAL program data from UofT's calendar to generate an ACCURATE course plan.
-
-CRITICAL RULES:
-- Use ONLY real UofT course codes (e.g. MAT237Y1, CSC207H1)
-- Semester labels must be: "First Year Fall", "First Year Winter", "Second Year Fall", etc.
-- NEVER put a course before its prerequisites are completed
+            content: `You are an expert UofT academic advisor.
+RULES:
+- Use ONLY official UofT course codes with section suffix (e.g. MAT237Y1, CSC207H1)
+- Semester labels MUST be: "First Year Fall", "First Year Winter", "Second Year Fall", etc.
+- NEVER include courses the student has already completed
+- NEVER schedule a course before its prerequisites are completed
 - Max 5 courses per semester
-- Required courses MUST match the official program requirements from the calendar data
-- workload is hours/week (1-15)
-- prerequisites must be exact course codes`,
+- workload = realistic hours per week (5-15)`,
           },
           {
             role: 'user',
             content: `Generate complete degree plan for ${profile.name} in ${program} at UofT.
 
-Student info:
-- Currently in: Year ${startYear}
-- Completed courses: ${JSON.stringify(completed)}
+Student:
+- Starting from: Year ${startYear} (${remainingSemesters[0]})
+- ALREADY COMPLETED - DO NOT PUT THESE IN THE PLAN: ${JSON.stringify(completed)}
 - Goals: ${goals}
 - Learning style: ${profile.learningStyle}
 
-OFFICIAL UOFT CALENDAR DATA FOR ${program.toUpperCase()}:
-${programData || 'Use your knowledge of UofT programs'}
-
-KNOWN PREREQUISITES:
-MAT237Y1 → requires MAT137Y1
-MAT240H1 → requires MAT137Y1
-MAT247H1 → requires MAT240H1
-MAT257Y1 → requires MAT157Y1
-MAT267H1 → requires MAT157Y1, MAT240H1
-MAT301H1 → requires MAT240H1
-MAT327H1 → requires MAT257Y1
-MAT337H1 → requires MAT237Y1, MAT246H1
-MAT347Y1 → requires MAT247H1
-MAT351Y1 → requires MAT267H1, MAT237Y1
-MAT354H1 → requires MAT257Y1
-MAT357H1 → requires MAT257Y1
-STA237H1 → requires MAT137Y1
-STA238H1 → requires STA237H1
-STA347H1 → requires MAT237Y1, STA238H1
-CSC148H1 → requires CSC108H1
-CSC110Y1 → no prereqs (new stream)
-CSC111H1 → requires CSC110Y1
-CSC207H1 → requires CSC148H1
-CSC209H1 → requires CSC148H1
-CSC236H1 → requires CSC148H1, CSC165H1
-CSC258H1 → requires CSC148H1, CSC165H1
-CSC263H1 → requires CSC207H1, CSC236H1
-CSC369H1 → requires CSC209H1, CSC263H1
-CSC373H1 → requires CSC263H1
-CSC311H1 → requires CSC207H1, MAT237Y1, STA238H1
+OFFICIAL UOFT CALENDAR DATA FOR ${program}:
+${programContext}
 
 Semesters to fill: ${remainingSemesters.join(', ')}
 
@@ -163,7 +143,7 @@ Return ONLY this JSON:
     "completedCredits": ${completed.length * 0.5},
     "requiredCredits": 20,
     "remainingRequired": ["MAT237Y1", "MAT240H1"],
-    "nextMilestone": "Complete first year requirements to unlock upper year courses"
+    "nextMilestone": "specific next step"
   }
 }`,
           },
@@ -177,9 +157,23 @@ Return ONLY this JSON:
     const raw = data.choices?.[0]?.message?.content?.trim() || ''
     try {
       const parsed = JSON.parse(raw)
+
+      // Filter out already completed courses from schedule
+      const filteredSchedule = (parsed.courseSchedule || [])
+        .map((sem: Semester) => ({
+          ...sem,
+          courses: sem.courses.filter(
+            (c: Course) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, ''))
+          ),
+          totalWorkload: sem.courses
+            .filter((c: Course) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, '')))
+            .reduce((sum: number, c: Course) => sum + (c.workload || 8), 0),
+        }))
+        .filter((sem: Semester) => sem.courses.length > 0)
+
       return NextResponse.json({
         message: parsed.message || '',
-        courseSchedule: parsed.courseSchedule || [],
+        courseSchedule: filteredSchedule,
         degreeProgress: parsed.degreeProgress || null,
       })
     } catch {
