@@ -20,67 +20,60 @@ const PROGRAM_CALENDAR_URLS: Record<string, string> = {
   'Neuroscience Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1216',
 }
 
+import { NextResponse } from 'next/server'
+
+// 这里的池子是保证 AI 不会“偷懒”的核心
+const SPECIALIST_POOLS: Record<string, string[]> = {
+  'Mathematics Specialist': 'MAT137, MAT223, MAT224, MAT237, MAT240, MAT247, MAT351, MAT357, MAT363, MAT367',
+  'Computer Science Specialist': 'CSC108, CSC148, CSC165, CSC207, CSC209, CSC236, CSC258, CSC263, CSC369, CSC373, CSC411',
+  'Statistics Major': 'STA237, STA238, STA257, STA261, STA302, STA303, STA305, STA347',
+}
+
 export async function POST(req: Request) {
   try {
-    const openrouterKey = process.env.OPENROUTER_API_KEY
-    if (!openrouterKey) return NextResponse.json({ error: 'Config error' }, { status: 500 })
-
     const profile = await req.json()
-    const { name, programOfStudy, admissionCategory, interests, learningStyle, coursesCompleted } = profile
+    const { name, yearType, programOfStudy, interests, learningStyle, coursesCompleted } = profile
     
-    const program = programOfStudy || admissionCategory || 'General Studies'
-    const completedSet = new Set((coursesCompleted || []).map((c: string) => c.toUpperCase().replace(/\s/g, '')))
+    // 1. 动态确定起始学期
+    const startSemester = yearType === 'first' ? 'First Year Fall' : 'Second Year Fall'
+    
+    // 2. 注入专业课程池
+    const pool = SPECIALIST_POOLS[programOfStudy] || 'CSC108, MAT137, ENG100, SOC100, PSY100'
 
-    const personalizationPrompt = `
-      USER PROFILE: ${name}, ${program}, Interests: ${interests?.join(', ')}, Style: ${learningStyle}.
-      RULES:
-      1. MUST return exactly 5 courses per semester.
-      2. If a course is not in the calendar, use a logical placeholder.
-      3. Reason must be 1 sentence connecting to user interests.
-      4. ALWAYS return empty arrays [] if no data is found for a field.
+    const systemPrompt = `
+      You are a professional UofT Academic Advisor. 
+      CURRENT CONTEXT: 
+      - Starting point: ${startSemester}
+      - Student Goal: ${interests?.join(', ')}
+      - Rules:
+        1. MUST fill 5 courses per semester.
+        2. IF start is 'Second Year Fall', skip all first-year courses.
+        3. Prioritize courses from this pool for ${programOfStudy}: ${pool}.
+        4. Match course difficulty to student year.
+        5. For every course, add a 'reason' field explaining why this matches their interest in ${interests?.join(', ')}.
     `
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openrouterKey}`,
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'openai/gpt-4o',
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: `You are an expert UofT Advisor. ${personalizationPrompt}` },
-          { role: 'user', content: `Generate a 4-year plan. JSON format with courseSchedule[] and degreeProgress{}.` }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Generate a 4-year degree plan. User completed: ${JSON.stringify(coursesCompleted)}. Ensure exactly 5 courses per semester.` }
         ],
       }),
     })
 
-    const rawData = await response.json()
-    let parsed = JSON.parse(rawData.choices[0].message.content)
-
-    if (!Array.isArray(parsed.courseSchedule)) parsed.courseSchedule = [];
-    
-    parsed.courseSchedule.forEach((sem: any) => {
-        sem.courses = Array.isArray(sem.courses) ? sem.courses : [];
-        sem.courses = sem.courses.filter((c: any) => !completedSet.has(c.code?.toUpperCase().replace(/\s/g, '')));
-    });
-
-    if (!parsed.degreeProgress) {
-        parsed.degreeProgress = { completedCredits: 0, requiredCredits: 20, remainingRequired: [] };
-    }
-    if (!Array.isArray(parsed.degreeProgress.remainingRequired)) {
-        parsed.degreeProgress.remainingRequired = [];
-    }
+    const data = await response.json()
+    const parsed = JSON.parse(data.choices[0].message.content)
 
     return NextResponse.json(parsed)
-
   } catch (error) {
-    console.error("API Generation Error:", error);
-    return NextResponse.json({ 
-      error: 'Failed to generate plan',
-      courseSchedule: [], // 返回空结构防止前端崩溃
-      degreeProgress: { remainingRequired: [] }
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
   }
 }
