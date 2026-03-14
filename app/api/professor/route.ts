@@ -1,23 +1,32 @@
 import { NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
 
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: { responseMimeType: 'application/json' },
-    })
-
-    const prompt = `You are a UofT academic advisor with knowledge of Rate My Professors and Reddit r/UofT.
-
-Analyze professors who teach ${courseCode} at University of Toronto.
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://uof-t-ai-assistant.vercel.app',
+        'X-Title': 'UofT AI Assistant',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o-mini',
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a UofT academic advisor. You must respond with only a valid JSON object.',
+          },
+          {
+            role: 'user',
+            content: `Analyze professors who teach ${courseCode} at University of Toronto based on your knowledge of Rate My Professors and Reddit r/UofT.
 
 Student profile:
 - Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
@@ -25,7 +34,7 @@ Student profile:
 - Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
 - Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
 
-Return a JSON object with this exact structure:
+Return this JSON:
 {
   "courseCode": "${courseCode}",
   "courseName": "full course name",
@@ -45,25 +54,30 @@ Return a JSON object with this exact structure:
         "workload": 5,
         "engagement": 8
       },
-      "examStyle": "description of exam format and style",
+      "examStyle": "description of exam format",
       "teachingStyle": "description of teaching approach",
-      "bestFor": "type of student who thrives with this prof",
-      "warnings": "honest heads up for students",
-      "tags": ["#ProofHeavy", "#GoodOfficeHours", "#BellCurve"],
-      "recentQuotes": ["paraphrased student feedback 1", "paraphrased student feedback 2"],
+      "bestFor": "type of student who thrives",
+      "warnings": "honest heads up",
+      "tags": ["#ProofHeavy", "#GoodOfficeHours"],
+      "recentQuotes": ["paraphrased feedback 1", "paraphrased feedback 2"],
       "enrollmentTrend": "stable"
     }
   ]
-}`
+}`,
+          },
+        ],
+      }),
+    })
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const data = await response.json()
+    if (data.error) return NextResponse.json({ error: data.error.message || 'OpenRouter error' }, { status: 500 })
 
+    const raw = data.choices?.[0]?.message?.content?.trim() || ''
     try {
-      return NextResponse.json(JSON.parse(text))
+      return NextResponse.json(JSON.parse(raw))
     } catch {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response', raw: text }, { status: 500 })
+      const jsonMatch = raw.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response', raw }, { status: 500 })
       return NextResponse.json(JSON.parse(jsonMatch[0]))
     }
   } catch (error: unknown) {
