@@ -25,18 +25,13 @@ export default function DashboardPage() {
   const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null)
   const [welcomeLoading, setWelcomeLoading] = useState(true)
   const [welcomeError, setWelcomeError] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     const data = getOnboardingData()
-    if (!data?.name) {
-      router.replace('/')
-      return
-    }
-    if (!data.learningStyle) {
-      router.replace('/')
-      return
-    }
+    if (!data?.name) { router.replace('/'); return }
+    if (!data.learningStyle) { router.replace('/'); return }
     setProfile(data)
   }, [router])
 
@@ -58,6 +53,11 @@ export default function DashboardPage() {
       .finally(() => setWelcomeLoading(false))
   }, [profile?.name])
 
+  function handleLogout() {
+    localStorage.clear()
+    router.replace('/')
+  }
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[#0a0e14] flex items-center justify-center">
@@ -70,14 +70,49 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0e14]">
-      <header className="border-b border-[#1e2a3a] bg-[#121922]/80 backdrop-blur">
+      {/* Header */}
+      <header className="border-b border-[#1e2a3a] bg-[#121922]/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <Link href="/dashboard" className="text-lg font-bold text-white">
             UofT AI Assistant
           </Link>
-          <span className="text-sm text-[#8b9aad]">
-            {profile?.name ?? ''} · {displayProgram}
-          </span>
+
+          {/* Profile menu */}
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e2a3a] hover:bg-[#243040] transition-all text-sm text-white"
+            >
+              <div className="w-7 h-7 rounded-full bg-[#0066CC] flex items-center justify-center text-white font-bold text-xs">
+                {profile?.name?.[0]?.toUpperCase() ?? 'U'}
+              </div>
+              <span>{profile?.name ?? 'Student'}</span>
+              <span className="text-[#8b9aad]">▾</span>
+            </button>
+
+            {/* Dropdown */}
+            {menuOpen && (
+              <>
+                {/* Backdrop to close menu */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-[#1a2332] border border-[#1e2a3a] rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-[#1e2a3a]">
+                    <p className="text-white font-semibold">{profile?.name}</p>
+                    <p className="text-[#8b9aad] text-xs mt-0.5">{displayProgram}</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-3 text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium"
+                  >
+                    🚪 Log Out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
