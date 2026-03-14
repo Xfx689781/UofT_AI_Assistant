@@ -5,239 +5,143 @@ import { useState, useCallback, useMemo } from 'react'
 export interface OnboardingData {
   name: string
   yearType: 'first' | 'second+' | ''
-  // First year path
   admissionCategory: string
   coursesTaken: string[]
   interests: string[]
   goalsFirstYear: string
-  // Second year+ path
   programCategory: string
   programOfStudy: string
   programOther: string
   coursesCompleted: string[]
   goalsSecondYear: string
-  // Final (both)
   learningStyle: string
+  studyHoursPerWeek: string
+  examPreference: string
+  officeHoursImportance: string
+  communicationPreference: string
 }
 
 const STORAGE_KEY = 'uoft-ai-onboarding'
 
-// ── Program tree ──────────────────────────────────────────────
 const PROGRAM_TREE: { category: string; icon: string; programs: string[] }[] = [
   {
-    category: 'Mathematics',
-    icon: '∑',
+    category: 'Mathematics', icon: '∑',
     programs: [
-      'Mathematics Specialist',
-      'Mathematics Major',
-      'Mathematics Minor',
-      'Applied Mathematics Specialist',
-      'Mathematics & Physics Specialist',
+      'Mathematics Specialist', 'Mathematics Major', 'Mathematics Minor',
+      'Applied Mathematics Specialist', 'Mathematics & Physics Specialist',
       'Mathematics & Philosophy Specialist',
       'Mathematics & Its Applications Specialist (Teaching)',
       'Mathematics & Its Applications Specialist (Probability/Statistics)',
       'Mathematics & Its Applications Specialist (Physical Science)',
-      'Actuarial Science Specialist',
-      'Actuarial Science Major',
+      'Actuarial Science Specialist', 'Actuarial Science Major',
     ],
   },
   {
-    category: 'Statistics & Data Science',
-    icon: '📊',
+    category: 'Statistics & Data Science', icon: '📊',
     programs: [
-      'Statistical Sciences Specialist',
-      'Statistical Sciences Specialist (Theory & Methods)',
-      'Data Science Specialist',
-      'Statistics Major',
-      'Statistics Minor',
+      'Statistical Sciences Specialist', 'Statistical Sciences Specialist (Theory & Methods)',
+      'Data Science Specialist', 'Statistics Major', 'Statistics Minor',
     ],
   },
   {
-    category: 'Computer Science',
-    icon: '💻',
+    category: 'Computer Science', icon: '💻',
     programs: [
-      'Computer Science Specialist',
-      'Computer Science Specialist (Artificial Intelligence)',
-      'Computer Science Major',
-      'Computer Science Minor',
+      'Computer Science Specialist', 'Computer Science Specialist (Artificial Intelligence)',
+      'Computer Science Major', 'Computer Science Minor',
       'Bioinformatics & Computational Biology Specialist',
     ],
   },
   {
-    category: 'Physics & Astronomy',
-    icon: '🔭',
+    category: 'Physics & Astronomy', icon: '🔭',
     programs: [
-      'Physics Specialist',
-      'Physics Major',
-      'Physics Minor',
-      'Astronomy & Physics Specialist',
-      'Astronomy & Astrophysics Major',
-      'Astronomy & Astrophysics Minor',
+      'Physics Specialist', 'Physics Major', 'Physics Minor',
+      'Astronomy & Physics Specialist', 'Astronomy & Astrophysics Major', 'Astronomy & Astrophysics Minor',
     ],
   },
   {
-    category: 'Chemistry',
-    icon: '⚗️',
+    category: 'Chemistry', icon: '⚗️',
+    programs: ['Chemistry Specialist', 'Chemistry Major', 'Chemistry Minor', 'Medicinal Chemistry Specialist'],
+  },
+  {
+    category: 'Life Sciences', icon: '🧬',
     programs: [
-      'Chemistry Specialist',
-      'Chemistry Major',
-      'Chemistry Minor',
-      'Medicinal Chemistry Specialist',
+      'Biology Specialist', 'Biology Major', 'Biology Minor',
+      'Molecular Genetics & Microbiology Specialist', 'Human Biology Specialist',
+      'Neuroscience Specialist', 'Neuroscience Major', 'Pharmacology Specialist',
+      'Physiology Specialist', 'Physiology Major',
     ],
   },
   {
-    category: 'Life Sciences',
-    icon: '🧬',
+    category: 'Economics & Commerce', icon: '📈',
     programs: [
-      'Biology Specialist',
-      'Biology Major',
-      'Biology Minor',
-      'Molecular Genetics & Microbiology Specialist',
-      'Human Biology Specialist',
-      'Neuroscience Specialist',
-      'Neuroscience Major',
-      'Pharmacology Specialist',
-      'Physiology Specialist',
-      'Physiology Major',
+      'Economics Specialist', 'Economics Major', 'Economics Minor',
+      'Finance & Economics Specialist', 'Accounting Specialist', 'Management Specialist',
     ],
   },
   {
-    category: 'Economics & Commerce',
-    icon: '📈',
+    category: 'Psychology', icon: '🧠',
     programs: [
-      'Economics Specialist',
-      'Economics Major',
-      'Economics Minor',
-      'Finance & Economics Specialist',
-      'Accounting Specialist',
-      'Management Specialist',
+      'Psychology Specialist', 'Psychology Major', 'Psychology Minor',
+      'Cognitive Science Specialist', 'Cognitive Science Major',
     ],
   },
   {
-    category: 'Psychology',
-    icon: '🧠',
+    category: 'Social Sciences', icon: '🌐',
     programs: [
-      'Psychology Specialist',
-      'Psychology Major',
-      'Psychology Minor',
-      'Cognitive Science Specialist',
-      'Cognitive Science Major',
+      'Sociology Specialist', 'Sociology Major', 'Sociology Minor',
+      'Political Science Specialist', 'Political Science Major', 'Political Science Minor',
+      'Criminology & Sociolegal Studies Specialist', 'Criminology & Sociolegal Studies Major',
+      'Geography Specialist', 'Geography Major', 'Geography Minor',
+      'Urban Studies Specialist', 'Urban Studies Major',
+      'Anthropology Specialist', 'Anthropology Major', 'Anthropology Minor',
+      'International Relations Specialist', 'International Relations Major',
     ],
   },
   {
-    category: 'Social Sciences',
-    icon: '🌐',
+    category: 'Humanities', icon: '📚',
     programs: [
-      'Sociology Specialist',
-      'Sociology Major',
-      'Sociology Minor',
-      'Political Science Specialist',
-      'Political Science Major',
-      'Political Science Minor',
-      'Criminology & Sociolegal Studies Specialist',
-      'Criminology & Sociolegal Studies Major',
-      'Geography Specialist',
-      'Geography Major',
-      'Geography Minor',
-      'Urban Studies Specialist',
-      'Urban Studies Major',
-      'Anthropology Specialist',
-      'Anthropology Major',
-      'Anthropology Minor',
-      'International Relations Specialist',
-      'International Relations Major',
+      'English Specialist', 'English Major', 'English Minor',
+      'History Specialist', 'History Major', 'History Minor',
+      'Philosophy Specialist', 'Philosophy Major', 'Philosophy Minor',
+      'Linguistics Specialist', 'Linguistics Major', 'Linguistics Minor',
+      'Art History Specialist', 'Art History Major', 'Art History Minor',
+      'Drama Specialist', 'Drama Major', 'Drama Minor',
     ],
   },
   {
-    category: 'Humanities',
-    icon: '📚',
+    category: 'Music', icon: '🎵',
+    programs: ['Music Specialist', 'Music Major', 'Music Minor'],
+  },
+  {
+    category: 'Languages', icon: '🗣️',
     programs: [
-      'English Specialist',
-      'English Major',
-      'English Minor',
-      'History Specialist',
-      'History Major',
-      'History Minor',
-      'Philosophy Specialist',
-      'Philosophy Major',
-      'Philosophy Minor',
-      'Linguistics Specialist',
-      'Linguistics Major',
-      'Linguistics Minor',
-      'Art History Specialist',
-      'Art History Major',
-      'Art History Minor',
-      'Drama Specialist',
-      'Drama Major',
-      'Drama Minor',
+      'French Language & Linguistics Specialist', 'French Major', 'French Minor',
+      'Spanish Major', 'Spanish Minor', 'Italian Major', 'Italian Minor',
+      'German Major', 'German Minor', 'East Asian Studies Major', 'East Asian Studies Minor',
+      'Near & Middle Eastern Civilizations Specialist', 'Near & Middle Eastern Civilizations Major',
     ],
   },
   {
-    category: 'Music',
-    icon: '🎵',
+    category: 'Environment & Health', icon: '🌿',
     programs: [
-      'Music Specialist',
-      'Music Major',
-      'Music Minor',
+      'Environmental Science Specialist', 'Environmental Science Major',
+      'Environmental Studies Major', 'Health Studies Specialist', 'Health Studies Major',
     ],
   },
   {
-    category: 'Languages',
-    icon: '🗣️',
+    category: 'Interdisciplinary', icon: '🔀',
     programs: [
-      'French Language & Linguistics Specialist',
-      'French Major',
-      'French Minor',
-      'Spanish Major',
-      'Spanish Minor',
-      'Italian Major',
-      'Italian Minor',
-      'German Major',
-      'German Minor',
-      'East Asian Studies Major',
-      'East Asian Studies Minor',
-      'Near & Middle Eastern Civilizations Specialist',
-      'Near & Middle Eastern Civilizations Major',
+      'Indigenous Studies Major', 'Indigenous Studies Minor',
+      'Women & Gender Studies Specialist', 'Women & Gender Studies Major',
+      'Canadian Studies Major', 'Archaeology Specialist', 'Archaeology Major',
     ],
   },
-  {
-    category: 'Environment & Health',
-    icon: '🌿',
-    programs: [
-      'Environmental Science Specialist',
-      'Environmental Science Major',
-      'Environmental Studies Major',
-      'Health Studies Specialist',
-      'Health Studies Major',
-    ],
-  },
-  {
-    category: 'Interdisciplinary',
-    icon: '🔀',
-    programs: [
-      'Indigenous Studies Major',
-      'Indigenous Studies Minor',
-      'Women & Gender Studies Specialist',
-      'Women & Gender Studies Major',
-      'Canadian Studies Major',
-      'Archaeology Specialist',
-      'Archaeology Major',
-    ],
-  },
-  {
-    category: 'Other',
-    icon: '✏️',
-    programs: [],
-  },
+  { category: 'Other', icon: '✏️', programs: [] },
 ]
 
 const ADMISSION_CATEGORIES = [
-  'Mathematical & Physical Sciences',
-  'Life Sciences',
-  'Computer Science',
-  'Humanities',
-  'Social Sciences',
-  'Rotman Commerce',
+  'Mathematical & Physical Sciences', 'Life Sciences', 'Computer Science',
+  'Humanities', 'Social Sciences', 'Rotman Commerce',
 ]
 
 const INTERESTS = [
@@ -267,18 +171,12 @@ const LEARNING_STYLES = [
 ]
 
 export const defaultOnboardingData: OnboardingData = {
-  name: '',
-  yearType: '',
-  admissionCategory: '',
-  coursesTaken: [],
-  interests: [],
-  goalsFirstYear: '',
-  programCategory: '',
-  programOfStudy: '',
-  programOther: '',
-  coursesCompleted: [],
-  goalsSecondYear: '',
-  learningStyle: '',
+  name: '', yearType: '', admissionCategory: '',
+  coursesTaken: [], interests: [], goalsFirstYear: '',
+  programCategory: '', programOfStudy: '', programOther: '',
+  coursesCompleted: [], goalsSecondYear: '', learningStyle: '',
+  studyHoursPerWeek: '', examPreference: '',
+  officeHoursImportance: '', communicationPreference: '',
 }
 
 export function saveOnboardingData(data: OnboardingData) {
@@ -302,10 +200,8 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-// ── TagInput ──────────────────────────────────────────────────
 function TagInput({
-  tags,
-  onTagsChange,
+  tags, onTagsChange,
   placeholder = 'Type course code and press Enter',
 }: {
   tags: string[]
@@ -313,19 +209,13 @@ function TagInput({
   placeholder?: string
 }) {
   const [value, setValue] = useState('')
-
   const addTag = useCallback((tag: string) => {
     const t = tag.trim().toUpperCase()
-    if (t && !tags.includes(t)) {
-      onTagsChange([...tags, t])
-      setValue('')
-    }
+    if (t && !tags.includes(t)) { onTagsChange([...tags, t]); setValue('') }
   }, [tags, onTagsChange])
-
   const removeTag = useCallback((i: number) => {
     onTagsChange(tags.filter((_, idx) => idx !== i))
   }, [tags, onTagsChange])
-
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2 p-2 min-h-[44px] rounded-lg bg-[#0a0e14] border border-[#1e2a3a] focus-within:ring-2 focus-within:ring-[#0066CC]">
@@ -335,9 +225,7 @@ function TagInput({
             <button type="button" onClick={() => removeTag(i)} className="text-[#8b9aad] hover:text-white ml-0.5">×</button>
           </span>
         ))}
-        <input
-          type="text"
-          value={value}
+        <input type="text" value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); if (value.trim()) addTag(value) }
@@ -352,10 +240,7 @@ function TagInput({
   )
 }
 
-// ── Main Onboarding ───────────────────────────────────────────
-interface OnboardingProps {
-  onComplete: () => void
-}
+interface OnboardingProps { onComplete: () => void }
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [data, setData] = useState<OnboardingData>(defaultOnboardingData)
@@ -366,9 +251,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     const base = ['name', 'year'] as const
     if (!data.yearType) return [...base]
     if (data.yearType === 'first') {
-      return [...base, 'admission', 'courses-first', 'interests', 'goals-first', 'learning-style'] as const
+      return [...base, 'admission', 'courses-first', 'interests', 'goals-first', 'learning-style', 'study-preferences'] as const
     }
-    return [...base, 'program-category', 'program-select', 'courses-second', 'goals-second', 'learning-style'] as const
+    return [...base, 'program-category', 'program-select', 'courses-second', 'goals-second', 'learning-style', 'study-preferences'] as const
   }, [data.yearType])
 
   const currentStepId = steps[stepIndex]
@@ -382,13 +267,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   }, [])
 
   const goNext = useCallback(() => {
-    if (isLast) {
-      saveOnboardingData(data)
-      onComplete()
-    } else {
-      setDirection('forward')
-      setStepIndex((i) => i + 1)
-    }
+    if (isLast) { saveOnboardingData(data); onComplete() }
+    else { setDirection('forward'); setStepIndex((i) => i + 1) }
   }, [isLast, data, onComplete])
 
   const goBack = useCallback(() => {
@@ -413,14 +293,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       case 'courses-second': return true
       case 'goals-second': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
+      case 'study-preferences': return data.studyHoursPerWeek !== '' && data.examPreference !== '' && data.officeHoursImportance !== ''
       default: return false
     }
   }, [currentStepId, data])
 
+  void direction
+
   return (
     <div className="min-h-screen bg-[#0a0e14] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl">
-        {/* Progress */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-1">UofT AI Assistant</h1>
           <p className="text-[#8b9aad] text-sm">Step {stepIndex + 1} of {totalSteps}</p>
@@ -431,13 +313,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
         <div key={currentStepId} className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-8 shadow-xl">
 
-          {/* Name */}
           {currentStepId === 'name' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your name?</h2>
-              <input
-                type="text"
-                value={data.name}
+              <input type="text" value={data.name}
                 onChange={(e) => update('name', e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && canProceed && goNext()}
                 placeholder="e.g. Alex"
@@ -447,7 +326,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Year */}
           {currentStepId === 'year' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What year are you in?</h2>
@@ -456,9 +334,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   { value: 'first', title: 'First Year', sub: "Still exploring, haven't chosen a POSt yet" },
                   { value: 'second+', title: 'Second Year +', sub: 'Already enrolled in a program of study' },
                 ].map(({ value, title, sub }) => (
-                  <button
-                    key={value}
-                    type="button"
+                  <button key={value} type="button"
                     onClick={() => update('yearType', value as 'first' | 'second+')}
                     className={`text-left p-6 rounded-xl border-2 transition-all duration-200 ${
                       data.yearType === value
@@ -474,7 +350,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Admission category */}
           {currentStepId === 'admission' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your admission category?</h2>
@@ -492,15 +367,29 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Courses first year */}
           {currentStepId === 'courses-first' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">What courses have you taken so far?</h2>
-              <TagInput tags={data.coursesTaken} onTagsChange={(t) => update('coursesTaken', t)} placeholder="e.g. MAT135, CSC108" />
+              <h2 className="text-xl font-semibold text-white mb-2">What courses have you taken so far?</h2>
+              <p className="text-sm text-[#8b9aad] mb-4">Include courses from both Fall and Winter this year</p>
+              <TagInput tags={data.coursesTaken} onTagsChange={(t) => update('coursesTaken', t)} placeholder="e.g. MAT137, CSC108" />
+              <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Common first year courses — click to add:</p>
+                <div className="flex flex-wrap gap-2">
+                  {['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'CSC108', 'CSC110Y1', 'CSC148', 'CSC165', 'STA130', 'STA237', 'PHY131', 'PHY132', 'CHM135', 'CHM136', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100'].map(c => (
+                    <button key={c} type="button"
+                      onClick={() => { if (!data.coursesTaken.includes(c)) update('coursesTaken', [...data.coursesTaken, c]) }}
+                      className={`px-2 py-1 rounded text-xs font-mono transition-all ${
+                        data.coursesTaken.includes(c)
+                          ? 'bg-[#0066CC] text-white'
+                          : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]'
+                      }`}
+                    >{c}</button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
 
-          {/* Interests */}
           {currentStepId === 'interests' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What are you interested in?</h2>
@@ -521,7 +410,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Goals first year */}
           {currentStepId === 'goals-first' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What are your goals?</h2>
@@ -537,7 +425,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Program category — big cards */}
           {currentStepId === 'program-category' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What&apos;s your field of study?</h2>
@@ -545,11 +432,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
                 {PROGRAM_TREE.map(({ category, icon }) => (
                   <button key={category} type="button"
-                    onClick={() => {
-                      update('programCategory', category)
-                      update('programOfStudy', '')
-                      update('programOther', '')
-                    }}
+                    onClick={() => { update('programCategory', category); update('programOfStudy', ''); update('programOther', '') }}
                     className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2 ${
                       data.programCategory === category
                         ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
@@ -564,7 +447,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Program select — specific programs in chosen category */}
           {currentStepId === 'program-select' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-1">
@@ -572,18 +454,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </h2>
               {data.programCategory !== 'Other' && (
                 <button type="button" onClick={() => { setDirection('back'); setStepIndex(i => i - 1) }}
-                  className="text-xs text-[#0066CC] hover:underline mb-4 block"
-                >
-                  ← Change field
-                </button>
+                  className="text-xs text-[#0066CC] hover:underline mb-4 block">← Change field</button>
               )}
-
               {data.programCategory === 'Other' ? (
-                <input
-                  type="text"
-                  value={data.programOther}
+                <input type="text" value={data.programOther}
                   onChange={(e) => update('programOther', e.target.value)}
-                  placeholder="e.g. Engineering Science, Renaissance Studies..."
+                  placeholder="e.g. Engineering Science..."
                   className="w-full mt-2 px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
                   autoFocus
                 />
@@ -603,15 +479,29 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Courses second year */}
           {currentStepId === 'courses-second' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">Which courses have you completed?</h2>
+              <h2 className="text-xl font-semibold text-white mb-2">Which courses have you completed?</h2>
+              <p className="text-sm text-[#8b9aad] mb-4">Include ALL courses from previous years</p>
               <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
+              <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Common courses — click to add:</p>
+                <div className="flex flex-wrap gap-2">
+                  {['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT237', 'MAT240', 'MAT246', 'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'STA130', 'STA237', 'STA238', 'PHY131', 'PHY132', 'BIO120', 'BIO130', 'PSY100', 'SOC100', 'ECO101', 'ECO102'].map(c => (
+                    <button key={c} type="button"
+                      onClick={() => { if (!data.coursesCompleted.includes(c)) update('coursesCompleted', [...data.coursesCompleted, c]) }}
+                      className={`px-2 py-1 rounded text-xs font-mono transition-all ${
+                        data.coursesCompleted.includes(c)
+                          ? 'bg-[#0066CC] text-white'
+                          : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]'
+                      }`}
+                    >{c}</button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
 
-          {/* Goals second year */}
           {currentStepId === 'goals-second' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What are your goals?</h2>
@@ -627,7 +517,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Learning style */}
           {currentStepId === 'learning-style' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your learning style?</h2>
@@ -649,7 +538,94 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {/* Nav buttons */}
+          {currentStepId === 'study-preferences' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-6">A few more preferences</h2>
+              <div className="space-y-6">
+
+                <div>
+                  <p className="text-sm text-white font-medium mb-3">How many hours per week can you study?</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {['Under 10h', '10–20h', '20–30h', '30h+'].map(opt => (
+                      <button key={opt} type="button" onClick={() => update('studyHoursPerWeek', opt)}
+                        className={`px-3 py-2.5 rounded-xl border-2 text-sm text-center transition-all ${
+                          data.studyHoursPerWeek === opt
+                            ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
+                            : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                        }`}
+                      >{opt}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-white font-medium mb-3">What exam format do you prefer?</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'multiple-choice', label: '☑️ Multiple Choice' },
+                      { id: 'proof-based', label: '📐 Proof / Theory' },
+                      { id: 'computation', label: '🔢 Computation' },
+                      { id: 'open-book', label: '📖 Open Book' },
+                      { id: 'take-home', label: '🏠 Take Home' },
+                      { id: 'no-preference', label: '🤷 No Preference' },
+                    ].map(({ id, label }) => (
+                      <button key={id} type="button" onClick={() => update('examPreference', id)}
+                        className={`px-3 py-2.5 rounded-xl border-2 text-sm text-left transition-all ${
+                          data.examPreference === id
+                            ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
+                            : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                        }`}
+                      >{label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-white font-medium mb-3">How important is professor accessibility?</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'critical', label: 'Critical', sub: 'I rely heavily on office hours' },
+                      { id: 'helpful', label: 'Helpful', sub: 'Nice to have, not essential' },
+                      { id: 'not-needed', label: 'Not Needed', sub: 'I rarely go to office hours' },
+                    ].map(({ id, label, sub }) => (
+                      <button key={id} type="button" onClick={() => update('officeHoursImportance', id)}
+                        className={`text-left p-3 rounded-xl border-2 text-sm transition-all ${
+                          data.officeHoursImportance === id
+                            ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
+                            : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                        }`}
+                      >
+                        <p className="font-medium">{label}</p>
+                        <p className="text-xs text-[#8b9aad] mt-0.5">{sub}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-white font-medium mb-3">How do you prefer to contact professors? <span className="text-[#6b7a8d] font-normal">(optional)</span></p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'email', label: '📧 Email' },
+                      { id: 'office-hours', label: '🚪 Office Hours' },
+                      { id: 'online-forum', label: '💬 Online Forum' },
+                      { id: 'minimal', label: '🙈 Minimal Contact' },
+                    ].map(({ id, label }) => (
+                      <button key={id} type="button" onClick={() => update('communicationPreference', id)}
+                        className={`px-3 py-2.5 rounded-xl border-2 text-sm transition-all ${
+                          data.communicationPreference === id
+                            ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
+                            : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                        }`}
+                      >{label}</button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </>
+          )}
+
           <div className="flex justify-between mt-8">
             <button type="button" onClick={goBack} disabled={isFirst}
               className="px-4 py-2 rounded-lg text-[#8b9aad] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
