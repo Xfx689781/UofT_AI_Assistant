@@ -1,9 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+import { getOnboardingData, type OnboardingData } from '@/components/Onboarding'
 
 function MatchScore({ score }: { score: number }) {
 const color = score >= 85 ? '#22c55e' : score >= 70 ? '#0066CC' : '#f59e0b'
+interface ProfessorData {
+  courseCode: string
+  courseName: string
+  professors: Professor[]
+  recommendedFor: string
+  recommendationReason: string
+  studentLearningAnalysis: string
+}
 return (
     <div className="flex items-center gap-2">
       <div className="relative w-12 h-12">
