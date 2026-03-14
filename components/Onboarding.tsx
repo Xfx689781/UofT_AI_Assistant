@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
 export interface OnboardingData {
   name: string
@@ -11,8 +11,8 @@ export interface OnboardingData {
   interests: string[]
   goalsFirstYear: string
   // Second year+ path
+  programCategory: string
   programOfStudy: string
-  programType: string
   programOther: string
   coursesCompleted: string[]
   goalsSecondYear: string
@@ -21,6 +21,215 @@ export interface OnboardingData {
 }
 
 const STORAGE_KEY = 'uoft-ai-onboarding'
+
+// ── Program tree ──────────────────────────────────────────────
+const PROGRAM_TREE: { category: string; icon: string; programs: string[] }[] = [
+  {
+    category: 'Mathematics',
+    icon: '∑',
+    programs: [
+      'Mathematics Specialist',
+      'Mathematics Major',
+      'Mathematics Minor',
+      'Applied Mathematics Specialist',
+      'Mathematics & Physics Specialist',
+      'Mathematics & Philosophy Specialist',
+      'Mathematics & Its Applications Specialist (Teaching)',
+      'Mathematics & Its Applications Specialist (Probability/Statistics)',
+      'Mathematics & Its Applications Specialist (Physical Science)',
+      'Actuarial Science Specialist',
+      'Actuarial Science Major',
+    ],
+  },
+  {
+    category: 'Statistics & Data Science',
+    icon: '📊',
+    programs: [
+      'Statistical Sciences Specialist',
+      'Statistical Sciences Specialist (Theory & Methods)',
+      'Data Science Specialist',
+      'Statistics Major',
+      'Statistics Minor',
+    ],
+  },
+  {
+    category: 'Computer Science',
+    icon: '💻',
+    programs: [
+      'Computer Science Specialist',
+      'Computer Science Specialist (Artificial Intelligence)',
+      'Computer Science Major',
+      'Computer Science Minor',
+      'Bioinformatics & Computational Biology Specialist',
+    ],
+  },
+  {
+    category: 'Physics & Astronomy',
+    icon: '🔭',
+    programs: [
+      'Physics Specialist',
+      'Physics Major',
+      'Physics Minor',
+      'Astronomy & Physics Specialist',
+      'Astronomy & Astrophysics Major',
+      'Astronomy & Astrophysics Minor',
+    ],
+  },
+  {
+    category: 'Chemistry',
+    icon: '⚗️',
+    programs: [
+      'Chemistry Specialist',
+      'Chemistry Major',
+      'Chemistry Minor',
+      'Medicinal Chemistry Specialist',
+    ],
+  },
+  {
+    category: 'Life Sciences',
+    icon: '🧬',
+    programs: [
+      'Biology Specialist',
+      'Biology Major',
+      'Biology Minor',
+      'Molecular Genetics & Microbiology Specialist',
+      'Human Biology Specialist',
+      'Neuroscience Specialist',
+      'Neuroscience Major',
+      'Pharmacology Specialist',
+      'Physiology Specialist',
+      'Physiology Major',
+    ],
+  },
+  {
+    category: 'Economics & Commerce',
+    icon: '📈',
+    programs: [
+      'Economics Specialist',
+      'Economics Major',
+      'Economics Minor',
+      'Finance & Economics Specialist',
+      'Accounting Specialist',
+      'Management Specialist',
+    ],
+  },
+  {
+    category: 'Psychology',
+    icon: '🧠',
+    programs: [
+      'Psychology Specialist',
+      'Psychology Major',
+      'Psychology Minor',
+      'Cognitive Science Specialist',
+      'Cognitive Science Major',
+    ],
+  },
+  {
+    category: 'Social Sciences',
+    icon: '🌐',
+    programs: [
+      'Sociology Specialist',
+      'Sociology Major',
+      'Sociology Minor',
+      'Political Science Specialist',
+      'Political Science Major',
+      'Political Science Minor',
+      'Criminology & Sociolegal Studies Specialist',
+      'Criminology & Sociolegal Studies Major',
+      'Geography Specialist',
+      'Geography Major',
+      'Geography Minor',
+      'Urban Studies Specialist',
+      'Urban Studies Major',
+      'Anthropology Specialist',
+      'Anthropology Major',
+      'Anthropology Minor',
+      'International Relations Specialist',
+      'International Relations Major',
+    ],
+  },
+  {
+    category: 'Humanities',
+    icon: '📚',
+    programs: [
+      'English Specialist',
+      'English Major',
+      'English Minor',
+      'History Specialist',
+      'History Major',
+      'History Minor',
+      'Philosophy Specialist',
+      'Philosophy Major',
+      'Philosophy Minor',
+      'Linguistics Specialist',
+      'Linguistics Major',
+      'Linguistics Minor',
+      'Art History Specialist',
+      'Art History Major',
+      'Art History Minor',
+      'Drama Specialist',
+      'Drama Major',
+      'Drama Minor',
+    ],
+  },
+  {
+    category: 'Music',
+    icon: '🎵',
+    programs: [
+      'Music Specialist',
+      'Music Major',
+      'Music Minor',
+    ],
+  },
+  {
+    category: 'Languages',
+    icon: '🗣️',
+    programs: [
+      'French Language & Linguistics Specialist',
+      'French Major',
+      'French Minor',
+      'Spanish Major',
+      'Spanish Minor',
+      'Italian Major',
+      'Italian Minor',
+      'German Major',
+      'German Minor',
+      'East Asian Studies Major',
+      'East Asian Studies Minor',
+      'Near & Middle Eastern Civilizations Specialist',
+      'Near & Middle Eastern Civilizations Major',
+    ],
+  },
+  {
+    category: 'Environment & Health',
+    icon: '🌿',
+    programs: [
+      'Environmental Science Specialist',
+      'Environmental Science Major',
+      'Environmental Studies Major',
+      'Health Studies Specialist',
+      'Health Studies Major',
+    ],
+  },
+  {
+    category: 'Interdisciplinary',
+    icon: '🔀',
+    programs: [
+      'Indigenous Studies Major',
+      'Indigenous Studies Minor',
+      'Women & Gender Studies Specialist',
+      'Women & Gender Studies Major',
+      'Canadian Studies Major',
+      'Archaeology Specialist',
+      'Archaeology Major',
+    ],
+  },
+  {
+    category: 'Other',
+    icon: '✏️',
+    programs: [],
+  },
+]
 
 const ADMISSION_CATEGORIES = [
   'Mathematical & Physical Sciences',
@@ -32,15 +241,8 @@ const ADMISSION_CATEGORIES = [
 ]
 
 const INTERESTS = [
-  'Pure Mathematics',
-  'Statistics',
-  'Computer Science',
-  'Physics',
-  'Economics',
-  'Biology',
-  'Psychology',
-  'Philosophy',
-  'Other',
+  'Pure Mathematics', 'Statistics', 'Computer Science', 'Physics',
+  'Economics', 'Biology', 'Psychology', 'Philosophy', 'Other',
 ]
 
 const GOALS_FIRST_YEAR = [
@@ -49,31 +251,6 @@ const GOALS_FIRST_YEAR = [
   'Graduate school eventually',
   'Industry/tech job',
 ]
-
-const PROGRAM_GROUPS: { group: string; options: string[] }[] = [
-  {
-    group: 'Mathematics',
-    options: [
-      'Mathematics Specialist',
-      'Mathematics Major',
-      'Mathematics Minor',
-      'Applied Mathematics Specialist',
-      'Mathematics & Physics Specialist',
-      'Mathematics & Philosophy Specialist',
-      'Mathematics & Its Applications (several focuses)',
-    ],
-  },
-  {
-    group: 'Statistics',
-    options: ['Statistical Sciences Specialist', 'Statistics Major', 'Statistics Minor'],
-  },
-  {
-    group: 'Computer Science',
-    options: ['CS Specialist', 'CS Major', 'CS Minor'],
-  },
-]
-
-const PROGRAM_TYPES = ['Specialist', 'Major', 'Minor']
 
 const GOALS_SECOND_YEAR = [
   'Graduate school / Research',
@@ -96,8 +273,8 @@ export const defaultOnboardingData: OnboardingData = {
   coursesTaken: [],
   interests: [],
   goalsFirstYear: '',
+  programCategory: '',
   programOfStudy: '',
-  programType: '',
   programOther: '',
   coursesCompleted: [],
   goalsSecondYear: '',
@@ -116,7 +293,6 @@ export function getOnboardingData(): OnboardingData | null {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as OnboardingData
-    // Migrate old shape: ensure arrays exist
     if (!Array.isArray(parsed.coursesTaken)) parsed.coursesTaken = []
     if (!Array.isArray(parsed.interests)) parsed.interests = []
     if (!Array.isArray(parsed.coursesCompleted)) parsed.coursesCompleted = []
@@ -126,10 +302,7 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-interface OnboardingProps {
-  onComplete: () => void
-}
-
+// ── TagInput ──────────────────────────────────────────────────
 function TagInput({
   tags,
   onTagsChange,
@@ -141,60 +314,35 @@ function TagInput({
 }) {
   const [value, setValue] = useState('')
 
-  const addTag = useCallback(
-    (tag: string) => {
-      const t = tag.trim().toUpperCase()
-      if (t && !tags.includes(t)) {
-        onTagsChange([...tags, t])
-        setValue('')
-      }
-    },
-    [tags, onTagsChange]
-  )
-
-  const removeTag = useCallback(
-    (i: number) => {
-      onTagsChange(tags.filter((_, idx) => idx !== i))
-    },
-    [tags, onTagsChange]
-  )
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      if (value.trim()) addTag(value)
-      else if (e.currentTarget.value.includes(',')) {
-        e.currentTarget.value.split(',').forEach((s) => addTag(s))
-      }
-    } else if (e.key === 'Backspace' && !value && tags.length) {
-      removeTag(tags.length - 1)
+  const addTag = useCallback((tag: string) => {
+    const t = tag.trim().toUpperCase()
+    if (t && !tags.includes(t)) {
+      onTagsChange([...tags, t])
+      setValue('')
     }
-  }
+  }, [tags, onTagsChange])
+
+  const removeTag = useCallback((i: number) => {
+    onTagsChange(tags.filter((_, idx) => idx !== i))
+  }, [tags, onTagsChange])
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2 p-2 min-h-[44px] rounded-lg bg-[#0a0e14] border border-[#1e2a3a] focus-within:ring-2 focus-within:ring-[#0066CC] focus-within:border-transparent">
+      <div className="flex flex-wrap gap-2 p-2 min-h-[44px] rounded-lg bg-[#0a0e14] border border-[#1e2a3a] focus-within:ring-2 focus-within:ring-[#0066CC]">
         {tags.map((tag, i) => (
-          <span
-            key={`${tag}-${i}`}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#002A5C] text-[#e8ecf1] text-sm"
-          >
+          <span key={`${tag}-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#002A5C] text-[#e8ecf1] text-sm">
             {tag}
-            <button
-              type="button"
-              onClick={() => removeTag(i)}
-              className="text-[#8b9aad] hover:text-white ml-0.5"
-              aria-label={`Remove ${tag}`}
-            >
-              ×
-            </button>
+            <button type="button" onClick={() => removeTag(i)} className="text-[#8b9aad] hover:text-white ml-0.5">×</button>
           </span>
         ))}
         <input
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); if (value.trim()) addTag(value) }
+            else if (e.key === 'Backspace' && !value && tags.length) removeTag(tags.length - 1)
+          }}
           placeholder={placeholder}
           className="flex-1 min-w-[140px] bg-transparent text-white placeholder-[#6b7a8d] focus:outline-none text-sm py-1"
         />
@@ -204,32 +352,23 @@ function TagInput({
   )
 }
 
+// ── Main Onboarding ───────────────────────────────────────────
+interface OnboardingProps {
+  onComplete: () => void
+}
+
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [data, setData] = useState<OnboardingData>(defaultOnboardingData)
   const [stepIndex, setStepIndex] = useState(0)
-  const [direction, setDirection] = useState<'forward' | 'back'>(`forward`)
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
 
   const steps = useMemo(() => {
     const base = ['name', 'year'] as const
     if (!data.yearType) return [...base]
     if (data.yearType === 'first') {
-      return [
-        ...base,
-        'admission',
-        'courses-first',
-        'interests',
-        'goals-first',
-        'learning-style',
-      ] as const
+      return [...base, 'admission', 'courses-first', 'interests', 'goals-first', 'learning-style'] as const
     }
-    return [
-      ...base,
-      'program',
-      'type',
-      'courses-second',
-      'goals-second',
-      'learning-style',
-    ] as const
+    return [...base, 'program-category', 'program-select', 'courses-second', 'goals-second', 'learning-style'] as const
   }, [data.yearType])
 
   const currentStepId = steps[stepIndex]
@@ -257,83 +396,42 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     setStepIndex((i) => Math.max(0, i - 1))
   }, [])
 
-  const programNameForType = data.programOfStudy && data.programOfStudy !== '__other__' ? data.programOfStudy : data.programOther
-  const showProgramType = useMemo(() => {
-    if (!programNameForType) return true
-    const lower = programNameForType.toLowerCase()
-    return !lower.includes('specialist') && !lower.includes('major') && !lower.includes('minor')
-  }, [programNameForType])
-
-  // When on type step and program already specifies type, set it from name
-  const typeFromProgram = useMemo(() => {
-    const prog = programNameForType
-    if (!prog) return ''
-    const l = prog.toLowerCase()
-    if (l.includes('specialist')) return 'Specialist'
-    if (l.includes('major')) return 'Major'
-    if (l.includes('minor')) return 'Minor'
-    return ''
-  }, [programNameForType])
-
-  useEffect(() => {
-    if (currentStepId === 'type' && typeFromProgram && !data.programType) {
-      update('programType', typeFromProgram)
-    }
-  }, [currentStepId, typeFromProgram, data.programType, update])
+  const selectedCategory = PROGRAM_TREE.find(c => c.category === data.programCategory)
 
   const canProceed = useMemo(() => {
     switch (currentStepId) {
-      case 'name':
-        return data.name.trim().length > 0
-      case 'year':
-        return data.yearType !== ''
-      case 'admission':
-        return data.admissionCategory.length > 0
-      case 'courses-first':
-        return true
-      case 'interests':
-        return data.interests.length > 0
-      case 'goals-first':
-        return data.goalsFirstYear.length > 0
-      case 'program': {
-        const hasProgram = data.programOfStudy && data.programOfStudy !== '__other__'
-        const hasOther = data.programOther.trim().length > 0
-        return !!hasProgram || hasOther
-      }
-      case 'type':
-        return data.programType.length > 0 || (!!typeFromProgram && !showProgramType)
-      case 'courses-second':
-        return true
-      case 'goals-second':
-        return data.goalsSecondYear.length > 0
-      case 'learning-style':
-        return data.learningStyle.length > 0
-      default:
-        return false
+      case 'name': return data.name.trim().length > 0
+      case 'year': return data.yearType !== ''
+      case 'admission': return data.admissionCategory.length > 0
+      case 'courses-first': return true
+      case 'interests': return data.interests.length > 0
+      case 'goals-first': return data.goalsFirstYear.length > 0
+      case 'program-category': return data.programCategory.length > 0
+      case 'program-select':
+        if (data.programCategory === 'Other') return data.programOther.trim().length > 0
+        return data.programOfStudy.length > 0
+      case 'courses-second': return true
+      case 'goals-second': return data.goalsSecondYear.length > 0
+      case 'learning-style': return data.learningStyle.length > 0
+      default: return false
     }
-  }, [currentStepId, data, typeFromProgram, showProgramType])
+  }, [currentStepId, data])
 
   return (
     <div className="min-h-screen bg-[#0a0e14] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl">
+        {/* Progress */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-1">UofT AI Assistant</h1>
-          <p className="text-[#8b9aad] text-sm">
-            Step {stepIndex + 1} of {totalSteps}
-          </p>
+          <p className="text-[#8b9aad] text-sm">Step {stepIndex + 1} of {totalSteps}</p>
           <div className="mt-3 h-1.5 bg-[#121922] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#0066CC] rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="h-full bg-[#0066CC] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
-        <div
-          key={currentStepId}
-          className={`bg-[#121922] border border-[#1e2a3a] rounded-xl p-8 shadow-xl ${direction === 'forward' ? 'animate-step-enter' : 'animate-step-enter-back'}`}
-        >
-          {/* STEP 1: Name */}
+        <div key={currentStepId} className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-8 shadow-xl">
+
+          {/* Name */}
           {currentStepId === 'name' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your name?</h2>
@@ -343,265 +441,199 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 onChange={(e) => update('name', e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && canProceed && goNext()}
                 placeholder="e.g. Alex"
-                className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC] focus:border-transparent"
+                className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
                 autoFocus
               />
             </>
           )}
 
-          {/* STEP 2: Year - two big cards */}
+          {/* Year */}
           {currentStepId === 'year' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What year are you in?</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => update('yearType', 'first')}
-                  className={`text-left p-6 rounded-xl border-2 transition-all duration-200 ${
-                    data.yearType === 'first'
-                      ? 'border-[#0066CC] bg-[#002A5C]/50 shadow-lg shadow-[#0066CC]/20'
-                      : 'border-[#1e2a3a] bg-[#0a0e14]/50 hover:border-[#0066CC]/60 hover:bg-[#002A5C]/20'
-                  }`}
-                >
-                  <span className="text-2xl font-bold text-white block mb-1">First Year</span>
-                  <span className="text-sm text-[#8b9aad]">
-                    Still exploring, haven&apos;t chosen a POSt yet
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => update('yearType', 'second+')}
-                  className={`text-left p-6 rounded-xl border-2 transition-all duration-200 ${
-                    data.yearType === 'second+'
-                      ? 'border-[#0066CC] bg-[#002A5C]/50 shadow-lg shadow-[#0066CC]/20'
-                      : 'border-[#1e2a3a] bg-[#0a0e14]/50 hover:border-[#0066CC]/60 hover:bg-[#002A5C]/20'
-                  }`}
-                >
-                  <span className="text-2xl font-bold text-white block mb-1">Second Year +</span>
-                  <span className="text-sm text-[#8b9aad]">
-                    Already enrolled in a program of study
-                  </span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* STEP 3A: Admission category */}
-          {currentStepId === 'admission' && (
-            <>
-              <h2 className="text-xl font-semibold text-white mb-6">
-                What&apos;s your admission category?
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {ADMISSION_CATEGORIES.map((cat) => (
+                {[
+                  { value: 'first', title: 'First Year', sub: "Still exploring, haven't chosen a POSt yet" },
+                  { value: 'second+', title: 'Second Year +', sub: 'Already enrolled in a program of study' },
+                ].map(({ value, title, sub }) => (
                   <button
-                    key={cat}
+                    key={value}
                     type="button"
-                    onClick={() => update('admissionCategory', cat)}
-                    className={`px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                      data.admissionCategory === cat
-                        ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
-                        : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                    onClick={() => update('yearType', value as 'first' | 'second+')}
+                    className={`text-left p-6 rounded-xl border-2 transition-all duration-200 ${
+                      data.yearType === value
+                        ? 'border-[#0066CC] bg-[#002A5C]/50 shadow-lg shadow-[#0066CC]/20'
+                        : 'border-[#1e2a3a] bg-[#0a0e14]/50 hover:border-[#0066CC]/60 hover:bg-[#002A5C]/20'
                     }`}
                   >
-                    {cat}
+                    <span className="text-2xl font-bold text-white block mb-1">{title}</span>
+                    <span className="text-sm text-[#8b9aad]">{sub}</span>
                   </button>
                 ))}
               </div>
             </>
           )}
 
-          {/* STEP 4A: Courses taken (first year) */}
-          {currentStepId === 'courses-first' && (
+          {/* Admission category */}
+          {currentStepId === 'admission' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">
-                What courses have you taken so far?
-              </h2>
-              <TagInput
-                tags={data.coursesTaken}
-                onTagsChange={(tags) => update('coursesTaken', tags)}
-                placeholder="e.g. MAT135, CSC108"
-              />
+              <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your admission category?</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {ADMISSION_CATEGORIES.map((cat) => (
+                  <button key={cat} type="button" onClick={() => update('admissionCategory', cat)}
+                    className={`px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                      data.admissionCategory === cat
+                        ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
+                        : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                    }`}
+                  >{cat}</button>
+                ))}
+              </div>
             </>
           )}
 
-          {/* STEP 5A: Interests - multi-select */}
+          {/* Courses first year */}
+          {currentStepId === 'courses-first' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-6">What courses have you taken so far?</h2>
+              <TagInput tags={data.coursesTaken} onTagsChange={(t) => update('coursesTaken', t)} placeholder="e.g. MAT135, CSC108" />
+            </>
+          )}
+
+          {/* Interests */}
           {currentStepId === 'interests' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">
-                What are you interested in?
-              </h2>
+              <h2 className="text-xl font-semibold text-white mb-2">What are you interested in?</h2>
               <p className="text-sm text-[#8b9aad] mb-4">Select all that apply</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {INTERESTS.map((opt) => {
                   const selected = data.interests.includes(opt)
                   return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => {
-                        update(
-                          'interests',
-                          selected ? data.interests.filter((x) => x !== opt) : [...data.interests, opt]
-                        )
-                      }}
+                    <button key={opt} type="button"
+                      onClick={() => update('interests', selected ? data.interests.filter(x => x !== opt) : [...data.interests, opt])}
                       className={`px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                        selected
-                          ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
-                          : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                        selected ? 'border-[#0066CC] bg-[#002A5C]/50 text-white' : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
                       }`}
-                    >
-                      {opt}
-                    </button>
+                    >{opt}</button>
                   )
                 })}
               </div>
             </>
           )}
 
-          {/* STEP 6A: Goals (first year) */}
+          {/* Goals first year */}
           {currentStepId === 'goals-first' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What are your goals?</h2>
               <div className="space-y-3">
                 {GOALS_FIRST_YEAR.map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => update('goalsFirstYear', opt)}
+                  <button key={opt} type="button" onClick={() => update('goalsFirstYear', opt)}
                     className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                      data.goalsFirstYear === opt
+                      data.goalsFirstYear === opt ? 'border-[#0066CC] bg-[#002A5C]/50 text-white' : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                    }`}
+                  >{opt}</button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Program category — big cards */}
+          {currentStepId === 'program-category' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-2">What&apos;s your field of study?</h2>
+              <p className="text-sm text-[#8b9aad] mb-4">Pick the broad area first</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                {PROGRAM_TREE.map(({ category, icon }) => (
+                  <button key={category} type="button"
+                    onClick={() => {
+                      update('programCategory', category)
+                      update('programOfStudy', '')
+                      update('programOther', '')
+                    }}
+                    className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all gap-2 ${
+                      data.programCategory === category
                         ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
-                        : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                        : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60 hover:bg-[#002A5C]/20'
                     }`}
                   >
-                    {opt}
+                    <span className="text-2xl">{icon}</span>
+                    <span className="text-xs font-medium text-center leading-tight">{category}</span>
                   </button>
                 ))}
               </div>
             </>
           )}
 
-          {/* STEP 3B: Program of study - grouped dropdown */}
-          {currentStepId === 'program' && (
+          {/* Program select — specific programs in chosen category */}
+          {currentStepId === 'program-select' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">
-                What&apos;s your program of study?
+              <h2 className="text-xl font-semibold text-white mb-1">
+                {data.programCategory === 'Other' ? 'Specify your program' : `Choose your ${data.programCategory} program`}
               </h2>
-              <select
-                value={data.programOfStudy || (data.programOther ? '__other__' : '')}
-                onChange={(e) => {
-                  const v = e.target.value
-                  if (v === '__other__') {
-                    update('programOfStudy', '__other__')
-                  } else {
-                    update('programOfStudy', v)
-                    update('programOther', '')
-                  }
-                }}
-                className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white focus:outline-none focus:ring-2 focus:ring-[#0066CC] mb-4"
-              >
-                <option value="">Select a program...</option>
-                {PROGRAM_GROUPS.map(({ group, options }) => (
-                  <optgroup key={group} label={group}>
-                    {options.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-                <option value="__other__">Other (specify below)</option>
-              </select>
-              {(data.programOfStudy === '' || data.programOfStudy === '__other__') && (
+              {data.programCategory !== 'Other' && (
+                <button type="button" onClick={() => { setDirection('back'); setStepIndex(i => i - 1) }}
+                  className="text-xs text-[#0066CC] hover:underline mb-4 block"
+                >
+                  ← Change field
+                </button>
+              )}
+
+              {data.programCategory === 'Other' ? (
                 <input
                   type="text"
                   value={data.programOther}
                   onChange={(e) => update('programOther', e.target.value)}
-                  placeholder="e.g. Engineering Science, other program"
-                  className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC] mt-2"
+                  placeholder="e.g. Engineering Science, Renaissance Studies..."
+                  className="w-full mt-2 px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC]"
+                  autoFocus
                 />
-              )}
-            </>
-          )}
-
-          {/* STEP 4B: Specialist / Major / Minor */}
-          {currentStepId === 'type' && (
-            <>
-              <h2 className="text-xl font-semibold text-white mb-6">What type?</h2>
-              {!showProgramType && typeFromProgram ? (
-                <p className="text-[#8b9aad] mb-4">
-                  Your program already specifies the type ({typeFromProgram}). Click Next to continue.
-                </p>
               ) : (
-                <div className="grid grid-cols-3 gap-4">
-                  {PROGRAM_TYPES.map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => update('programType', opt)}
-                      className={`px-4 py-4 rounded-xl border-2 text-center font-medium transition-all ${
-                        data.programType === opt
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 mt-2">
+                  {selectedCategory?.programs.map((prog) => (
+                    <button key={prog} type="button" onClick={() => update('programOfStudy', prog)}
+                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
+                        data.programOfStudy === prog
                           ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
                           : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
                       }`}
-                    >
-                      {opt}
-                    </button>
+                    >{prog}</button>
                   ))}
                 </div>
               )}
             </>
           )}
 
-          {/* STEP 5B: Courses completed (second year+) */}
+          {/* Courses second year */}
           {currentStepId === 'courses-second' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">
-                Which courses have you completed?
-              </h2>
-              <TagInput
-                tags={data.coursesCompleted}
-                onTagsChange={(tags) => update('coursesCompleted', tags)}
-              />
+              <h2 className="text-xl font-semibold text-white mb-6">Which courses have you completed?</h2>
+              <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
             </>
           )}
 
-          {/* STEP 6B: Goals (second year+) */}
+          {/* Goals second year */}
           {currentStepId === 'goals-second' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What are your goals?</h2>
               <div className="space-y-3">
                 {GOALS_SECOND_YEAR.map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => update('goalsSecondYear', opt)}
+                  <button key={opt} type="button" onClick={() => update('goalsSecondYear', opt)}
                     className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                      data.goalsSecondYear === opt
-                        ? 'border-[#0066CC] bg-[#002A5C]/50 text-white'
-                        : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
+                      data.goalsSecondYear === opt ? 'border-[#0066CC] bg-[#002A5C]/50 text-white' : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
                     }`}
-                  >
-                    {opt}
-                  </button>
+                  >{opt}</button>
                 ))}
               </div>
             </>
           )}
 
-          {/* FINAL: Learning style - 4 cards with icons */}
+          {/* Learning style */}
           {currentStepId === 'learning-style' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">
-                What&apos;s your learning style?
-              </h2>
+              <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your learning style?</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {LEARNING_STYLES.map(({ id, label, subtitle, icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => update('learningStyle', id)}
+                  <button key={id} type="button" onClick={() => update('learningStyle', id)}
                     className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
                       data.learningStyle === id
                         ? 'border-[#0066CC] bg-[#002A5C]/50 shadow-lg shadow-[#0066CC]/20'
@@ -617,23 +649,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Nav buttons */}
           <div className="flex justify-between mt-8">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={isFirst}
+            <button type="button" onClick={goBack} disabled={isFirst}
               className="px-4 py-2 rounded-lg text-[#8b9aad] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={!canProceed}
+            >Back</button>
+            <button type="button" onClick={goNext} disabled={!canProceed}
               className="px-6 py-2 rounded-lg bg-[#0066CC] text-white font-medium hover:bg-[#0080e6] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLast ? 'Finish' : 'Next'}
-            </button>
+            >{isLast ? 'Finish' : 'Next'}</button>
           </div>
         </div>
 
