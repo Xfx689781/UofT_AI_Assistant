@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: 'You are a UofT academic advisor with knowledge of Rate My Professors and Reddit r/UofT. Return ONLY valid JSON, no markdown.',
+            content: 'You are a UofT academic advisor. You MUST respond with ONLY a raw JSON object. Do NOT use markdown code blocks. Do NOT write ```json. Do NOT add any text before or after the JSON. Start your response directly with { and end with }.',
           },
           {
             role: 'user',
@@ -31,9 +31,9 @@ Student profile:
 - Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
 - Learning style: ${studentProfile?.learningStyle || 'not specified'}
 - Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
-- Completed: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
+- Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
 
-Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return ONLY this JSON:
+Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return this JSON object:
 {
   "courseCode": "${courseCode}",
   "courseName": "full course name",
@@ -70,13 +70,23 @@ Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return ONL
 
     const data = await response.json()
     const raw = data.choices?.[0]?.message?.content?.trim() || ''
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response' }, { status: 500 })
+
+    const cleaned = raw
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim()
+
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('Raw response:', raw)
+      return NextResponse.json({ error: 'Could not parse response', raw }, { status: 500 })
+    }
 
     try {
       return NextResponse.json(JSON.parse(jsonMatch[0]))
     } catch {
-      return NextResponse.json({ error: 'JSON parse failed' }, { status: 500 })
+      return NextResponse.json({ error: 'JSON parse failed', raw }, { status: 500 })
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
