@@ -82,74 +82,52 @@ export async function POST(req: Request) {
     ]
     const remainingSemesters = semesters.slice((startYear - 1) * 2)
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openrouterKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://uof-t-ai-assistant.vercel.app',
-        'X-Title': 'UofT AI Assistant',
+    // 建议在 API 路由中这样优化 Prompt 部分
+const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  // ... 其他配置保持不变
+  body: JSON.stringify({
+    model: 'openai/gpt-4o', // 建议使用 4o 获得更强的逻辑推理能力
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `You are a Senior UofT Academic Advisor.
+        TASKS: 
+        1. Create a 4-year degree plan. 
+        2. MANDATORY: Fill 5 courses per semester (unless graduation requirements are met sooner).
+        3. BALANCE: Mix 2-3 program core courses with 2 breadth/elective courses per semester.
+        4. VALIDATION: Only use courses found in the provided calendar data.
+        5. FORMAT: JSON output strictly following the schema.`,
       },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: `You are an expert UofT academic advisor.
-RULES:
-- Use ONLY official UofT course codes with section suffix (e.g. MAT237Y1, CSC207H1)
-- Semester labels MUST be: "First Year Fall", "First Year Winter", "Second Year Fall", etc.
-- NEVER include courses the student has already completed
-- NEVER schedule a course before its prerequisites are completed
-- Max 5 courses per semester
-- workload = realistic hours per week (5-15)`,
-          },
-          {
-            role: 'user',
-            content: `Generate complete degree plan for ${profile.name} in ${program} at UofT.
+      {
+        role: 'user',
+        content: `Generate a full, aggressive degree plan for ${profile.name}.
+        Program: ${program}
+        Completed: ${JSON.stringify(completed)}
+        Goals: ${goals}
+        Learning Style: ${profile.learningStyle}
 
-Student:
-- Starting from: Year ${startYear} (${remainingSemesters[0]})
-- ALREADY COMPLETED - DO NOT PUT THESE IN THE PLAN: ${JSON.stringify(completed)}
-- Goals: ${goals}
-- Learning style: ${profile.learningStyle}
+        Calendar Context: ${programContext}
 
-OFFICIAL UOFT CALENDAR DATA FOR ${program}:
-${programContext}
+        CRITICAL: Provide 5 courses per semester. If a student needs breadth requirements, select suitable courses (e.g., BR1, BR2, etc.).
 
-Semesters to fill: ${remainingSemesters.join(', ')}
-
-Return ONLY this JSON:
-{
-  "message": "warm 2-3 sentence welcome for ${profile.name} in ${program} with one specific tip",
-  "courseSchedule": [
-    {
-      "semester": "Second Year Fall",
-      "totalWorkload": 42,
-      "courses": [
+        Output as this JSON:
         {
-          "code": "MAT237Y1",
-          "name": "Multivariable Calculus",
-          "reason": "Required for ${program}",
-          "type": "required",
-          "workload": 12,
-          "prerequisites": ["MAT137Y1"]
-        }
-      ]
-    }
-  ],
-  "degreeProgress": {
-    "completedCredits": ${completed.length * 0.5},
-    "requiredCredits": 20,
-    "remainingRequired": ["MAT237Y1", "MAT240H1"],
-    "nextMilestone": "specific next step"
-  }
-}`,
-          },
-        ],
-      }),
-    })
+          "message": "String: 2 sentence encouraging advice",
+          "courseSchedule": [
+            {
+              "semester": "First Year Fall",
+              "courses": [
+                { "code": "MAT137Y1", "name": "Calculus", "type": "CORE", "workload": 10, "reason": "Program req" }
+              ]
+            }
+          ],
+          "degreeProgress": { ... }
+        }`,
+      },
+    ],
+  }),
+})})
 
     const data = await response.json()
     if (data.error) return NextResponse.json({ error: data.error.message }, { status: 500 })
