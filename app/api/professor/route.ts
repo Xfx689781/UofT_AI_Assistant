@@ -1,37 +1,44 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
-    }
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
 
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' } as never],
-      system: `You are a UofT academic advisor. Search RMP and Reddit r/UofT for professor data and return ONLY valid JSON, no markdown.`,
-      messages: [{
-        role: 'user',
-        content: `Search ratemyprofessors.com and reddit r/UofT for professors teaching ${courseCode} at University of Toronto.
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://uof-t-ai-assistant.vercel.app',
+        'X-Title': 'UofT AI Assistant',
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a UofT academic advisor with knowledge of Rate My Professors and Reddit r/UofT. Return ONLY valid JSON, no markdown.',
+          },
+          {
+            role: 'user',
+            content: `Analyze professors who teach ${courseCode} at University of Toronto.
 
 Student profile:
 - Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
 - Learning style: ${studentProfile?.learningStyle || 'not specified'}
 - Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
+- Completed: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
 
-Return ONLY this JSON:
+Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return ONLY this JSON:
 {
   "courseCode": "${courseCode}",
-  "courseName": "full name",
+  "courseName": "full course name",
   "recommendedFor": "Professor Name",
-  "recommendationReason": "why this prof suits this student",
+  "recommendationReason": "personalized reason for this student",
   "professors": [
     {
       "name": "Full Name",
@@ -46,27 +53,31 @@ Return ONLY this JSON:
         "workload": 5,
         "engagement": 8
       },
-      "examStyle": "description",
-      "teachingStyle": "description",
-      "bestFor": "type of student",
-      "warnings": "honest heads up",
-      "tags": ["#ProofHeavy", "#GoodOfficeHours"],
-      "recentQuotes": ["paraphrased feedback 1", "paraphrased feedback 2"],
+      "examStyle": "description of exam format and style",
+      "teachingStyle": "description of teaching approach",
+      "bestFor": "type of student who thrives with this prof",
+      "warnings": "honest heads up for students",
+      "tags": ["#ProofHeavy", "#GoodOfficeHours", "#BellCurve"],
+      "recentQuotes": ["paraphrased student feedback 1", "paraphrased student feedback 2"],
       "enrollmentTrend": "stable"
     }
   ]
 }`,
-      }],
+          },
+        ],
+      }),
     })
 
-    let raw = ''
-    for (const block of response.content) {
-      if (block.type === 'text') raw = block.text.trim()
-    }
-
+    const data = await response.json()
+    const raw = data.choices?.[0]?.message?.content?.trim() || ''
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response' }, { status: 500 })
-    return NextResponse.json(JSON.parse(jsonMatch[0]))
+
+    try {
+      return NextResponse.json(JSON.parse(jsonMatch[0]))
+    } catch {
+      return NextResponse.json({ error: 'JSON parse failed' }, { status: 500 })
+    }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: msg }, { status: 500 })
