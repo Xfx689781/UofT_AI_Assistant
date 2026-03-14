@@ -29,29 +29,40 @@ export async function POST(req: Request) {
           },
           {
             role: 'user',
-            content: `Generate a personalized academic plan for this UofT student.
+            content: `Generate a complete degree plan for this UofT student from NOW until graduation (all remaining semesters up to 4th year).
 
 Student:
 - Name: ${profile.name}
 - Program: ${program}
 - Year: ${profile.yearType}
-- Completed: ${JSON.stringify(profile.coursesCompleted || profile.coursesTaken || [])}
+- Completed courses: ${JSON.stringify(profile.coursesCompleted || profile.coursesTaken || [])}
 - Goals: ${profile.goalsSecondYear || profile.goalsFirstYear || 'not specified'}
 - Learning style: ${profile.learningStyle || 'not specified'}
-- Interests: ${JSON.stringify(profile.interests || [])}
 
-Based on real UofT ${program} degree requirements, return this JSON:
+IMPORTANT:
+- Generate ALL semesters from next semester until graduation (typically 6-8 semesters total)
+- Each course must include workload (hours per week as a number 1-15)
+- Each course must include prerequisites list
+- Each semester must include totalWorkload (sum of all course workloads)
+- Respect prerequisites strictly
+- Required courses first, then electives based on goals
+- Max 5 courses per semester
+
+Return this JSON:
 {
   "message": "warm 2-3 sentence welcome for ${profile.name} with one specific tip",
   "courseSchedule": [
     {
       "semester": "Fall 2026",
+      "totalWorkload": 42,
       "courses": [
         {
           "code": "MAT237",
           "name": "Multivariable Calculus",
-          "reason": "Required for your program, prereqs met",
-          "type": "required"
+          "reason": "Required for your program",
+          "type": "required",
+          "workload": 10,
+          "prerequisites": ["MAT137"]
         }
       ]
     }
@@ -59,7 +70,7 @@ Based on real UofT ${program} degree requirements, return this JSON:
   "degreeProgress": {
     "completedCredits": 2,
     "requiredCredits": 20,
-    "remainingRequired": ["MAT237", "MAT246"],
+    "remainingRequired": ["MAT237", "MAT246", "MAT301"],
     "nextMilestone": "Complete MAT237 to unlock upper-year math"
   }
 }`,
@@ -69,7 +80,7 @@ Based on real UofT ${program} degree requirements, return this JSON:
     })
 
     const data = await response.json()
-    if (data.error) return NextResponse.json({ error: data.error.message || 'OpenRouter error' }, { status: 500 })
+    if (data.error) return NextResponse.json({ error: data.error.message }, { status: 500 })
 
     const raw = data.choices?.[0]?.message?.content?.trim() || ''
     try {
@@ -80,14 +91,7 @@ Based on real UofT ${program} degree requirements, return this JSON:
         degreeProgress: parsed.degreeProgress || null,
       })
     } catch {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) return NextResponse.json({ message: '', courseSchedule: [], degreeProgress: null })
-      const parsed = JSON.parse(jsonMatch[0])
-      return NextResponse.json({
-        message: parsed.message || '',
-        courseSchedule: parsed.courseSchedule || [],
-        degreeProgress: parsed.degreeProgress || null,
-      })
+      return NextResponse.json({ message: '', courseSchedule: [], degreeProgress: null })
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
