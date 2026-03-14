@@ -1,67 +1,37 @@
 import { NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Anthropic from '@anthropic-ai/sdk'
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   try {
-    const geminiKey = process.env.GEMINI_API_KEY
-    const tavilyKey = process.env.TAVILY_API_KEY
-    if (!geminiKey) return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
-    if (!tavilyKey) return NextResponse.json({ error: 'TAVILY_API_KEY not configured' }, { status: 500 })
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+    }
 
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    // Search RMP + Reddit + UofT timetable
-    const searchRes = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: tavilyKey,
-        query: `${courseCode} UofT professor ratemyprofessors reddit 2024 2025 review`,
-        search_depth: 'advanced',
-        include_answer: true,
-        max_results: 8,
-      }),
-    })
-
-    const searchData = await searchRes.json()
-    const context = (searchData.results || [])
-      .map((r: { url: string; content: string }) => `Source: ${r.url}\n${r.content}`)
-      .join('\n\n')
-
-    const genAI = new GoogleGenerativeAI(geminiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: { responseMimeType: 'application/json' },
-    })
-
-    const prompt = `
-You are a specialized academic advisor for University of Toronto.
-Analyze the search results below about professors for ${courseCode}.
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' } as never],
+      system: `You are a UofT academic advisor. Search RMP and Reddit r/UofT for professor data and return ONLY valid JSON, no markdown.`,
+      messages: [{
+        role: 'user',
+        content: `Search ratemyprofessors.com and reddit r/UofT for professors teaching ${courseCode} at University of Toronto.
 
 Student profile:
 - Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
 - Learning style: ${studentProfile?.learningStyle || 'not specified'}
 - Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
-- Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
-
-Search results:
-${context}
-
-Instructions:
-- Identify all professors found for ${courseCode}
-- Score each dimension 1-10 based on evidence from the search results
-- Recommend the best professor for THIS specific student based on their profile
-- enrollmentTrend: guess "rising/stable/dropping" based on reviews sentiment
-- If data is sparse, still give best estimates with lower confidence noted in warnings
-- recentQuotes must be paraphrased from search results, never exact copied text
 
 Return ONLY this JSON:
 {
   "courseCode": "${courseCode}",
-  "courseName": "full course name",
+  "courseName": "full name",
   "recommendedFor": "Professor Name",
-  "recommendationReason": "personalized reason based on student profile",
+  "recommendationReason": "why this prof suits this student",
   "professors": [
     {
       "name": "Full Name",
@@ -76,20 +46,25 @@ Return ONLY this JSON:
         "workload": 5,
         "engagement": 8
       },
-      "examStyle": "description of exam format",
-      "teachingStyle": "description of teaching approach",
-      "bestFor": "type of student who thrives",
+      "examStyle": "description",
+      "teachingStyle": "description",
+      "bestFor": "type of student",
       "warnings": "honest heads up",
       "tags": ["#ProofHeavy", "#GoodOfficeHours"],
-      "recentQuotes": ["paraphrased student feedback 1", "paraphrased student feedback 2"],
+      "recentQuotes": ["paraphrased feedback 1", "paraphrased feedback 2"],
       "enrollmentTrend": "stable"
     }
   ]
-}`
+}`,
+      }],
+    })
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    let raw = ''
+    for (const block of response.content) {
+      if (block.type === 'text') raw = block.text.trim()
+    }
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response' }, { status: 500 })
     return NextResponse.json(JSON.parse(jsonMatch[0]))
   } catch (error: unknown) {
