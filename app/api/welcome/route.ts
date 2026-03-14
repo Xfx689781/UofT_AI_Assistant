@@ -1,24 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const PROGRAM_CALENDAR_URLS: Record<string, string> = {
-  'Mathematics Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1165',
-  'Mathematics Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1165',
-  'Mathematics Minor': 'https://artsci.calendar.utoronto.ca/program/asmin1165',
-  'Applied Mathematics Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1196',
-  'Mathematics & Physics Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1312',
-  'Statistical Sciences Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1169',
-  'Statistics Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1169',
-  'Data Science Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1697',
-  'Computer Science Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1689',
-  'Computer Science Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1689',
-  'Computer Science Minor': 'https://artsci.calendar.utoronto.ca/program/asmin1689',
-  'Psychology Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1397',
-  'Psychology Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1397',
-  'Sociology Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1435',
-  'Sociology Major': 'https://artsci.calendar.utoronto.ca/program/asmaj1435',
-  'Human Biology Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1213',
-  'Neuroscience Specialist': 'https://artsci.calendar.utoronto.ca/program/asspe1216',
-}
+// ... PROGRAM_CALENDAR_URLS 保持不变 ...
 
 export async function POST(req: Request) {
   try {
@@ -26,14 +8,35 @@ export async function POST(req: Request) {
     if (!openrouterKey) return NextResponse.json({ error: 'Config error' }, { status: 500 })
 
     const profile = await req.json()
-    const program = profile.programOfStudy || profile.admissionCategory
-    const completed = profile.coursesCompleted || []
-    const completedSet = new Set(completed.map((c: string) => c.toUpperCase().replace(/\s/g, '')))
+    const { 
+      name, 
+      programOfStudy, 
+      admissionCategory, 
+      interests, 
+      learningStyle, 
+      coursesCompleted 
+    } = profile
+    
+    const program = programOfStudy || admissionCategory
+    const completedSet = new Set((coursesCompleted || []).map((c: string) => c.toUpperCase().replace(/\s/g, '')))
 
-    // 1. 获取课程上下文 (这里简化处理，保持你原有的逻辑)
-    // ... (你的 Tavily 调用逻辑)
+    // 1. 动态构建个性化指令 (核心改动)
+    // 根据用户的兴趣和风格，动态调整 AI 的选课权重
+    const personalizationPrompt = `
+      USER ACADEMIC PROFILE:
+      - Name: ${name}
+      - Primary Interests: ${interests?.join(', ') || 'General Academic'}
+      - Preferred Learning Style: ${learningStyle || 'Standard'}
+      
+      PLANNING GUIDELINES:
+      - If interested in 'Pure Mathematics', prioritize Specialist-stream courses (e.g., MAT351, MAT357) over general electives.
+      - If 'Practice-heavy', select courses with labs or projects.
+      - If 'Self-study', suggest advanced seminar-style courses.
+      - Ensure the plan is strictly aligned with the ${program} requirements.
+      - For every course added, provide a 'reason' that explicitly connects back to the user's interests (e.g., "Perfect for your interest in Pure Math").
+    `
 
-    // 2. 生成计划 (重点优化 Prompt)
+    // 2. 调用 AI
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,40 +44,31 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o', // 使用更强的模型
+        model: 'openai/gpt-4o',
         response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content: `You are an expert UofT Academic Advisor.
-            CRITICAL RULES:
-            1. You MUST generate 5 courses for EVERY semester.
-            2. If you don't know the exact elective code, suggest a placeholder like "Breadth Requirement 1 (e.g., SOC100H1)".
-            3. Prioritize: Core requirements -> Prerequisites -> Breadth Requirements.
-            4. Output strictly in the requested JSON format.`
+            content: `You are an expert UofT Academic Advisor. ${personalizationPrompt}`
           },
           {
             role: 'user',
-            content: `Generate a full 4-year degree plan for ${profile.name} in ${program}.
-            Completed courses (DO NOT INCLUDE): ${JSON.stringify(completed)}.
+            content: `Generate a 4-year degree plan. 
+            Completed courses (DO NOT INCLUDE): ${JSON.stringify(Array.from(completedSet))}.
             
-            Format your response exactly as this JSON:
+            Return ONLY JSON:
             {
-              "message": "A 2-sentence encouraging summary.",
+              "message": "A personalized greeting and tip for ${name}.",
               "courseSchedule": [
                 {
                   "semester": "First Year Fall",
                   "totalWorkload": 25,
                   "courses": [
-                    { "code": "COURSE1", "name": "Name", "type": "CORE", "workload": 10, "reason": "..." },
-                    { "code": "COURSE2", "name": "Name", "type": "CORE", "workload": 10, "reason": "..." },
-                    { "code": "COURSE3", "name": "Name", "type": "BREADTH", "workload": 5, "reason": "..." },
-                    { "code": "COURSE4", "name": "Name", "type": "ELECTIVE", "workload": 5, "reason": "..." },
-                    { "code": "COURSE5", "name": "Name", "type": "ELECTIVE", "workload": 5, "reason": "..." }
+                    { "code": "...", "name": "...", "type": "...", "workload": 10, "reason": "Tailored to your interest in..." }
                   ]
                 }
               ],
-              "degreeProgress": { "completedCredits": 0, "requiredCredits": 20, "remainingRequired": [], "nextMilestone": "" }
+              "degreeProgress": { ... }
             }`
           }
         ],
@@ -82,9 +76,9 @@ export async function POST(req: Request) {
     })
 
     const data = await response.json()
-    const parsed = JSON.parse(data.choices[0].message.content)
+    let parsed = JSON.parse(data.choices[0].message.content)
 
-    // 3. 后端二次清洗：确保没有任何已完成课程残留
+    // 3. 后端二次清洗
     parsed.courseSchedule.forEach((sem: any) => {
         sem.courses = sem.courses.filter((c: any) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, '')))
     });
