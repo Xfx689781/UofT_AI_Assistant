@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
-    }
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
 
     const profile = await req.json()
     if (!profile?.name) return NextResponse.json({ error: 'Invalid profile' }, { status: 400 })
@@ -15,23 +11,40 @@ export async function POST(req: Request) {
     const program = profile.programOfStudy && profile.programOfStudy !== '__other__'
       ? profile.programOfStudy : profile.programOther || profile.admissionCategory
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' } as never],
-      system: `You are a UofT academic advisor. Search artsci.calendar.utoronto.ca for program requirements and return ONLY valid JSON, no markdown.`,
-      messages: [{
-        role: 'user',
-        content: `Student: ${profile.name}, Program: ${program}, Completed: ${JSON.stringify(profile.coursesCompleted || profile.coursesTaken || [])}, Goals: ${profile.goalsSecondYear || profile.goalsFirstYear}, Learning style: ${profile.learningStyle}
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://uof-t-ai-assistant.vercel.app',
+        'X-Title': 'UofT AI Assistant',
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a UofT academic advisor. Return ONLY valid JSON, no markdown, no extra text.',
+          },
+          {
+            role: 'user',
+            content: `Student: ${profile.name}
+Program: ${program}
+Completed courses: ${JSON.stringify(profile.coursesCompleted || profile.coursesTaken || [])}
+Goals: ${profile.goalsSecondYear || profile.goalsFirstYear || 'not specified'}
+Learning style: ${profile.learningStyle || 'not specified'}
+Year: ${profile.yearType}
 
-Search for "${program}" requirements on artsci.calendar.utoronto.ca then return ONLY this JSON:
+Based on UofT Arts & Science requirements for "${program}", generate a personalized course plan.
+
+Return ONLY this JSON:
 {
-  "message": "warm 2-3 sentence welcome mentioning name and one tip",
+  "message": "warm 2-3 sentence welcome for ${profile.name} mentioning their program and one specific tip",
   "courseSchedule": [
     {
       "semester": "Fall 2026",
       "courses": [
-        { "code": "MAT237", "name": "Multivariable Calculus", "reason": "Required, prereqs met", "type": "required" }
+        { "code": "MAT237", "name": "Multivariable Calculus", "reason": "Required for your program, prereqs met", "type": "required" }
       ]
     }
   ],
@@ -39,17 +52,16 @@ Search for "${program}" requirements on artsci.calendar.utoronto.ca then return 
     "completedCredits": 2,
     "requiredCredits": 20,
     "remainingRequired": ["MAT237", "MAT246"],
-    "nextMilestone": "Complete MAT237 to unlock upper-year math"
+    "nextMilestone": "Complete MAT237 to unlock upper-year math courses"
   }
 }`,
-      }],
+          },
+        ],
+      }),
     })
 
-    let raw = ''
-    for (const block of response.content) {
-      if (block.type === 'text') raw = block.text.trim()
-    }
-
+    const data = await response.json()
+    const raw = data.choices?.[0]?.message?.content?.trim() || ''
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ message: raw, courseSchedule: [], degreeProgress: null })
 
