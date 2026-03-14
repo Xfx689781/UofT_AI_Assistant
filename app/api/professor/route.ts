@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    // 串行搜索，避免并发限流
+    // Serial searches to avoid rate limiting
     const search1 = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -52,27 +52,51 @@ export async function POST(req: Request) {
       .map((r: { url: string; content: string }) => `[${r.url}]\n${r.content}`)
       .join('\n\n')
 
-    const learningStyleMap: Record<string, string> = {
-      'lecture': 'learns best through structured lectures',
-      'practice': 'needs many practice problems to learn',
-      'self-study': 'independent learner, prefers reading alone',
-      'collaborative': 'learns best in group settings',
-    }
-
-    const goalMap: Record<string, string> = {
-      'Graduate school / Research': 'aiming for grad school, needs rigorous theory',
-      'Industry job': 'focused on practical industry skills',
-      'Double major/minor exploration': 'exploring multiple fields',
-      'Graduate as efficiently as possible': 'wants manageable workload and clear grading',
-      'Get into Math/Stats/CS POSt': 'needs high GPA for competitive POSt',
-      'Explore before deciding': 'needs engaging teaching to stay motivated',
-    }
-
+    // Build detailed student persona for strong personalization
     const goals = studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || ''
     const learningStyle = studentProfile?.learningStyle || ''
     const studyHours = studentProfile?.studyHoursPerWeek || 'not specified'
     const examPref = studentProfile?.examPreference || 'not specified'
     const officeHours = studentProfile?.officeHoursImportance || 'not specified'
+    const program = studentProfile?.programOfStudy || studentProfile?.admissionCategory || ''
+    const interests = studentProfile?.interests || []
+    const completed = studentProfile?.coursesCompleted || studentProfile?.coursesTaken || []
+    const commPref = studentProfile?.communicationPreference || 'not specified'
+
+    // Derive student archetype for clearer AI instruction
+    const isGradSchool = goals.toLowerCase().includes('grad') || goals.toLowerCase().includes('research')
+    const isIndustry = goals.toLowerCase().includes('industry') || goals.toLowerCase().includes('job')
+    const isMath = program.toLowerCase().includes('math') || interests.includes('Pure Mathematics')
+    const isCS = program.toLowerCase().includes('computer') || interests.includes('Computer Science')
+    const isLifeSci = program.toLowerCase().includes('bio') || program.toLowerCase().includes('neuro') || program.toLowerCase().includes('physio') || interests.includes('Biology')
+    const isPsych = program.toLowerCase().includes('psych') || interests.includes('Psychology')
+    const isLectureStyle = learningStyle === 'lecture'
+    const isPracticeStyle = learningStyle === 'practice'
+    const isSelfStudy = learningStyle === 'self-study'
+    const needsOfficeHours = officeHours === 'critical'
+    const lightWorkload = studyHours === 'Under 10h'
+    const heavyWorkload = studyHours === '30h+'
+    const prefersProofExam = examPref === 'proof-based'
+    const prefersComputation = examPref === 'computation'
+    const prefersOpenBook = examPref === 'open-book' || examPref === 'take-home'
+
+    const studentArchetype = [
+      isGradSchool ? 'GRAD_SCHOOL_BOUND' : '',
+      isIndustry ? 'INDUSTRY_FOCUSED' : '',
+      isMath ? 'MATH_SPECIALIST' : '',
+      isCS ? 'CS_STUDENT' : '',
+      isLifeSci ? 'LIFE_SCI_STUDENT' : '',
+      isPsych ? 'PSYCH_STUDENT' : '',
+      isLectureStyle ? 'LECTURE_LEARNER' : '',
+      isPracticeStyle ? 'PRACTICE_LEARNER' : '',
+      isSelfStudy ? 'SELF_STUDY_LEARNER' : '',
+      needsOfficeHours ? 'NEEDS_SUPPORT' : '',
+      lightWorkload ? 'LIGHT_WORKLOAD_PREF' : '',
+      heavyWorkload ? 'CAN_HANDLE_HEAVY' : '',
+      prefersProofExam ? 'PROOF_EXAM_PREF' : '',
+      prefersComputation ? 'COMPUTATION_PREF' : '',
+      prefersOpenBook ? 'FLEXIBLE_EXAM_PREF' : '',
+    ].filter(Boolean).join(', ')
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -88,10 +112,41 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert UofT academic advisor.
-CRITICAL: Only use professor names explicitly found in the search results. Never invent names.
-If no professor names found, return {"notFound": true, "message": "No data found"}.
-Respond with only valid JSON.`,
+            content: `You are a UofT academic advisor that gives HIGHLY PERSONALIZED professor recommendations.
+
+Your most important job: match scores MUST differ significantly between different student types.
+A PSYCH_STUDENT asking about MAT237 should get very different scores than a MATH_SPECIALIST.
+A NEEDS_SUPPORT student should get much higher scores for accessible professors.
+A SELF_STUDY_LEARNER should get higher scores for professors who are less hand-holdy.
+
+SCORING RULES (be strict about these):
+- learningStyleFit (0-35):
+  * LECTURE_LEARNER + structured board-heavy prof = 30-35
+  * LECTURE_LEARNER + disorganized prof = 5-10
+  * PRACTICE_LEARNER + problem-set-heavy prof = 30-35
+  * PRACTICE_LEARNER + theory-only prof = 5-10
+  * SELF_STUDY_LEARNER + prof who posts notes/resources = 30-35
+  * SELF_STUDY_LEARNER + attendance-dependent prof = 10-15
+  * COLLABORATIVE_LEARNER + discussion-heavy prof = 30-35
+
+- goalsFit (0-35):
+  * GRAD_SCHOOL_BOUND + research-active rigorous prof = 30-35
+  * GRAD_SCHOOL_BOUND + easy/applied prof = 5-15
+  * INDUSTRY_FOCUSED + applied practical prof = 30-35
+  * INDUSTRY_FOCUSED + overly theoretical prof = 10-20
+  * LIFE_SCI_STUDENT or PSYCH_STUDENT taking math course = goalsFit max 20 (they need it to pass not excel)
+  * MATH_SPECIALIST + proof-heavy prof = 30-35
+
+- practicalFit (0-30):
+  * NEEDS_SUPPORT + accessible prof (high accessibility score) = 25-30
+  * NEEDS_SUPPORT + inaccessible prof = 5-10
+  * LIGHT_WORKLOAD_PREF + heavy workload prof = 5-15
+  * CAN_HANDLE_HEAVY + any workload = 20-30
+  * PROOF_EXAM_PREF + proof-based exams = 25-30
+  * COMPUTATION_PREF + computation exams = 25-30
+  * FLEXIBLE_EXAM_PREF + any format = 20-25
+
+Only use professor names found in search data. Return valid JSON only.`,
           },
           {
             role: 'user',
@@ -100,32 +155,34 @@ Respond with only valid JSON.`,
 SEARCH DATA:
 ${context}
 
-STUDENT PROFILE:
-- Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
-- Goals: ${goals} (${goalMap[goals] || goals})
-- Learning style: ${learningStyle} (${learningStyleMap[learningStyle] || learningStyle})
+STUDENT ARCHETYPE: ${studentArchetype || 'GENERAL_STUDENT'}
+
+RAW PROFILE:
+- Program: ${program}
+- Goals: ${goals}
+- Learning style: ${learningStyle}
 - Study hours/week: ${studyHours}
 - Exam preference: ${examPref}
 - Office hours importance: ${officeHours}
-- Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
+- Communication preference: ${commPref}
+- Interests: ${JSON.stringify(interests)}
+- Completed courses: ${JSON.stringify(completed)}
 
-Calculate match scores based on THIS specific student's profile.
-A practice learner + problem-set heavy prof = high score.
-A lecture learner + structured clear prof = high score.
-Grad school student + research-active rigorous prof = high score.
+Based on this student's archetype and raw profile, calculate match scores per the scoring rules.
+A ${studentArchetype || 'GENERAL_STUDENT'} student's scores will look very different from a MATH_SPECIALIST's scores.
 
 Return JSON:
 {
   "courseCode": "${courseCode}",
-  "courseName": "full name",
+  "courseName": "full official name",
   "dataConfidence": "high/medium/low",
   "yearsFound": ["2024", "2023"],
-  "studentLearningAnalysis": "2-3 sentences about this specific student's profile",
+  "studentLearningAnalysis": "2-3 sentences specifically about this student's archetype (${studentArchetype}) and what teaching style suits them for ${courseCode}",
   "recommendedFor": "Professor Name",
-  "recommendationReason": "personalized reason for THIS student",
+  "recommendationReason": "personalized reason referencing student archetype and specific needs",
   "professors": [
     {
-      "name": "name from search only",
+      "name": "name from search data only",
       "matchScore": 87.5,
       "matchBreakdown": {
         "learningStyleFit": 30,
@@ -138,8 +195,8 @@ Return JSON:
       "rmpDifficulty": 3.5,
       "numRatings": 45,
       "hasResearch": true,
-      "researchArea": "field",
-      "teachingResearchAlignment": "how research relates to teaching",
+      "researchArea": "field if found",
+      "teachingResearchAlignment": "how research relates to course content",
       "dimensions": {
         "teachingClarity": 8,
         "examPredictability": 7,
@@ -148,14 +205,14 @@ Return JSON:
         "workload": 5,
         "engagement": 8
       },
-      "teachingStyleAnalysis": "description",
-      "studentCompatibility": "why this prof matches THIS student specifically",
-      "examStyle": "format",
-      "bestFor": "type of student",
-      "warnings": "heads up",
-      "tags": ["#ProofHeavy"],
-      "recentQuotes": ["paraphrased feedback"],
-      "enrollmentTrend": "stable"
+      "teachingStyleAnalysis": "detailed teaching style",
+      "studentCompatibility": "explain specifically why this score for THIS archetype student — reference their learning style, goals, and preferences directly",
+      "examStyle": "format and style",
+      "bestFor": "type of student who thrives",
+      "warnings": "honest heads up, especially relevant to this student type",
+      "tags": ["#ProofHeavy", "#GoodOfficeHours"],
+      "recentQuotes": ["paraphrased from search data"],
+      "enrollmentTrend": "rising/stable/dropping"
     }
   ]
 }`,
