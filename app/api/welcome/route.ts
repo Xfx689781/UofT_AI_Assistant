@@ -1,22 +1,5 @@
 import { NextResponse } from 'next/server'
 
-interface CourseWithDetails {
-  code: string
-  name: string
-  reason: string
-  type: 'required' | 'elective'
-  workload: number
-  prerequisites: string[]
-  coreTopics: string[]
-  whyNow: string
-}
-
-interface SemesterPlan {
-  semester: string
-  totalWorkload: number
-  courses: CourseWithDetails[]
-}
-
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.OPENROUTER_API_KEY
@@ -34,26 +17,24 @@ export async function POST(req: Request) {
     const interests = profile.interests || []
     const learningStyle = profile.learningStyle || ''
     const studyHours = profile.studyHoursPerWeek || '10–20h'
+    const examPref = profile.examPreference || ''
 
-    const completedSet = new Set(completed.map(c => c.toUpperCase().replace(/\s/g, '')))
+    const completedSet = new Set(completed.map((c: string) => c.toUpperCase().replace(/\s/g, '')))
 
-    // Derive student context
+    const hasMat157 = completedSet.has('MAT157Y1') || completedSet.has('MAT157')
+    const hasMat137 = completedSet.has('MAT137Y1') || completedSet.has('MAT137')
+    const hasMat237 = completedSet.has('MAT237Y1') || completedSet.has('MAT237')
+    const hasMat240 = completedSet.has('MAT240H1') || completedSet.has('MAT240')
+    const isHighCapacity = studyHours === '20–30h' || studyHours === '30h+' || hasMat157
     const isGradSchool = goals.toLowerCase().includes('grad') || goals.toLowerCase().includes('research') || goals.toLowerCase().includes('theoretical')
     const isIndustry = goals.toLowerCase().includes('industry') || goals.toLowerCase().includes('job')
     const isMath = program.toLowerCase().includes('math') || interests.includes('Pure Mathematics')
     const isCS = program.toLowerCase().includes('computer') || interests.includes('Computer Science')
     const isStats = program.toLowerCase().includes('stat') || program.toLowerCase().includes('data') || interests.includes('Statistics')
-    const isLifeSci = program.toLowerCase().includes('bio') || program.toLowerCase().includes('neuro') || program.toLowerCase().includes('physio') || interests.includes('Biology')
+    const isLifeSci = program.toLowerCase().includes('bio') || program.toLowerCase().includes('neuro') || interests.includes('Biology')
     const isPsych = program.toLowerCase().includes('psych') || interests.includes('Psychology')
-    const canHandleHeavy = studyHours === '20–30h' || studyHours === '30h+'
-
-    // Semester labels based on year
-    const semesterMap: Record<string, string[]> = {
-      'first': ['First Year Fall', 'First Year Winter', 'Second Year Fall', 'Second Year Winter', 'Third Year Fall', 'Third Year Winter', 'Fourth Year Fall', 'Fourth Year Winter'],
-      'second': ['Second Year Fall', 'Second Year Winter', 'Third Year Fall', 'Third Year Winter', 'Fourth Year Fall', 'Fourth Year Winter'],
-      'third+': ['Third Year Fall', 'Third Year Winter', 'Fourth Year Fall', 'Fourth Year Winter'],
-    }
-    const semesters = semesterMap[yearType] || semesterMap['first']
+    const isSpecialist = program.toLowerCase().includes('specialist')
+    const yearLabel = yearType === 'first' ? 'First Year' : yearType === 'second' ? 'Second Year' : 'Third/Fourth Year'
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -69,148 +50,82 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert UofT academic advisor who thinks about courses from a HIGH-LEVEL KNOWLEDGE PERSPECTIVE, not just a checklist perspective.
+            content: `You are a brilliant UofT upperclassman giving direct, opinionated course advice. Strong students get hard courses. Weak students get manageable ones. Be specific and ambitious.
 
-Your philosophy: recommend courses that build a student's intellectual foundation, connect ideas across fields, and serve their long-term trajectory — not just whatever is "required next."
+COURSE NAME ACCURACY (CRITICAL - never get these wrong):
+- MAT237Y1 = Multivariable Calculus
+- MAT246H1 = Abstract Mathematics
+- MAT240H1 = Algebra I
+- MAT247H1 = Algebra II
+- MAT257Y1 = Analysis II (manifolds, differential forms, Stokes theorem)
+- MAT267H1 = Advanced ODEs
+- MAT301H1 = Groups and Symmetries
+- MAT315H1 = Introduction to Number Theory
+- MAT327H1 = Introduction to Topology
+- MAT334H1 = Complex Variables
+- MAT337H1 = Introduction to Real Analysis
+- MAT344H1 = Introduction to Combinatorics
+- MAT347Y1 = Groups, Rings and Fields
+- MAT354H1 = Complex Analysis I
+- MAT357H1 = Foundations of Real Analysis
+- MAT363H1 = Introduction to Differential Geometry
+- STA257H1 = Probability and Statistics I
+- STA261H1 = Probability and Statistics II
+- STA347H1 = Probability
+- STA302H1 = Methods of Data Analysis I
+- CSC236H1 = Introduction to Theory of Computation
+- CSC258H1 = Computer Organization
+- CSC263H1 = Data Structures and Analysis
+- CSC311H1 = Introduction to Machine Learning
+- CSC373H1 = Algorithm Design
+- CSC369H1 = Operating Systems
 
-CRITICAL RULES:
-1. NEVER recommend courses the student has already completed: ${JSON.stringify(completed)}
-2. Semester labels MUST be exactly from this list: ${JSON.stringify(semesters)}
-3. Respect prerequisites strictly
-4. For each course, explain its core intellectual content (not just "it's required")
-5. Max 4-5 courses per semester — quality over quantity
-6. Vary recommendations based on student profile — a psych student and a math specialist should get completely different courses
-7. If student is strong (30h+ study time, grad school goals) → include challenging upper-year courses earlier
-8. Use REAL UofT course codes with suffix (MAT237Y1, not just MAT237)
-
-KNOWN PREREQUISITES:
-- MAT237Y1 → MAT137Y1
-- MAT240H1 → MAT137Y1  
-- MAT244H1 → MAT135H1+MAT136H1+MAT223H1
-- MAT246H1 → MAT137Y1
-- MAT247H1 → MAT240H1
+PREREQUISITES:
 - MAT257Y1 → MAT157Y1
-- MAT267H1 → MAT157Y1+MAT240H1
-- MAT301H1 → MAT240H1
+- MAT267H1 → MAT157Y1 + MAT240H1
+- MAT240H1 → MAT137Y1
+- MAT247H1 → MAT240H1
+- MAT237Y1 → MAT137Y1
+- MAT246H1 → MAT137Y1
 - MAT327H1 → MAT257Y1
-- MAT334H1 → MAT237Y1
-- MAT337H1 → MAT237Y1+MAT246H1
 - MAT347Y1 → MAT247H1
-- MAT351Y1 → MAT267H1+MAT237Y1
+- MAT337H1 → MAT237Y1 + MAT246H1
 - MAT354H1 → MAT257Y1
 - MAT357H1 → MAT257Y1
-- MAT363H1 → MAT237Y1+MAT224H1
-- STA237H1 → MAT137Y1
-- STA238H1 → STA237H1
-- STA302H1 → STA238H1+MAT223H1
-- STA347H1 → MAT237Y1+STA238H1
-- CSC148H1 → CSC108H1
-- CSC110Y1 → none
-- CSC111H1 → CSC110Y1
-- CSC207H1 → CSC148H1
-- CSC209H1 → CSC148H1
-- CSC236H1 → CSC148H1+CSC165H1
-- CSC258H1 → CSC148H1+CSC165H1
-- CSC263H1 → CSC207H1+CSC236H1
-- CSC311H1 → CSC207H1+MAT237Y1+STA238H1
-- CSC369H1 → CSC209H1+CSC263H1
-- CSC373H1 → CSC263H1`,
+- STA257H1 → MAT137Y1
+- STA261H1 → STA257H1
+- STA347H1 → MAT237Y1 + STA238H1
+- CSC263H1 → CSC207H1 + CSC236H1
+- CSC311H1 → CSC207H1 + MAT237Y1 + STA238H1
+- CSC373H1 → CSC263H1
+- CSC369H1 → CSC209H1 + CSC263H1`,
           },
           {
             role: 'user',
-            content: `Generate a high-level course plan for ${profile.name}.
+            content: `Recommend courses for this UofT student.
 
-STUDENT PROFILE:
-- Program: ${program}
-- Year: ${yearType} (starting from ${semesters[0]})
-- Completed courses: ${JSON.stringify(completed)} ← DO NOT include any of these
+PROFILE:
+- Name: ${profile.name}
+- Program: ${program} (${isSpecialist ? 'Specialist' : 'Major/Minor'})
+- Year: ${yearLabel}
+- Completed: ${JSON.stringify(completed)}
 - Goals: ${goals}
 - Learning style: ${learningStyle}
-- Study capacity: ${studyHours}/week
+- Study hours: ${studyHours}
+- Exam preference: ${examPref}
 - Interests: ${JSON.stringify(interests)}
-- Student type: ${[
-  isGradSchool ? 'GRAD_SCHOOL_BOUND' : '',
-  isIndustry ? 'INDUSTRY_FOCUSED' : '',
-  isMath ? 'MATH_STUDENT' : '',
-  isCS ? 'CS_STUDENT' : '',
-  isStats ? 'STATS_STUDENT' : '',
-  isLifeSci ? 'LIFE_SCI_STUDENT' : '',
-  isPsych ? 'PSYCH_STUDENT' : '',
-  canHandleHeavy ? 'HIGH_CAPACITY' : 'MODERATE_CAPACITY',
-].filter(Boolean).join(', ')}
 
-PHILOSOPHY: Think about what courses will genuinely develop this student intellectually. 
-- For MATH_STUDENT + GRAD_SCHOOL_BOUND: prioritize proof-based theory courses (MAT246, MAT240, MAT337, MAT347)
-- For CS_STUDENT + INDUSTRY_FOCUSED: prioritize systems + ML courses (CSC263, CSC369, CSC311, CSC343)
-- For LIFE_SCI_STUDENT: mix of required bio courses + relevant quantitative electives
-- For HIGH_CAPACITY students: can introduce upper-year courses a year earlier if prereqs are met
-- Cross-disciplinary electives are valuable — a math student might benefit from STA347, a CS student from MAT337
+DERIVED:
+- Capability: ${isHighCapacity ? 'HIGH' : 'MODERATE'}
+- Math track: ${hasMat157 ? 'MAT157 (hard track)' : hasMat137 ? 'MAT137 (standard)' : 'No calc yet'}
+- Has MAT237: ${hasMat237}, Has MAT240: ${hasMat240}
+- Grad school: ${isGradSchool}, Industry: ${isIndustry}
+- Math: ${isMath}, CS: ${isCS}, Stats: ${isStats}, LifeSci: ${isLifeSci}, Psych: ${isPsych}
 
-For each course, explain its CORE INTELLECTUAL CONTENT — what will the student actually learn and why it matters for their trajectory.
-
-Return ONLY this JSON:
-{
-  "message": "warm 2-3 sentence welcome for ${profile.name} that reflects their specific trajectory (${program}, ${goals}) with one concrete insight",
-  "courseSchedule": [
-    {
-      "semester": "${semesters[0]}",
-      "totalWorkload": 38,
-      "courses": [
-        {
-          "code": "MAT246H1",
-          "name": "Abstract Mathematics",
-          "reason": "Foundation for all upper-year math — introduces the language of proofs",
-          "type": "required",
-          "workload": 8,
-          "prerequisites": ["MAT137Y1"],
-          "coreTopics": ["Mathematical induction", "Set theory", "Logic and proof techniques", "Functions and relations", "Introduction to abstract structures"],
-          "whyNow": "Take this in second year — it's the bridge between computational math and abstract thinking. Everything in MAT301, MAT337, MAT347 builds on this."
-        }
-      ]
-    }
-  ],
-  "degreeProgress": {
-    "completedCredits": ${completed.length * 0.5},
-    "requiredCredits": 20,
-    "remainingRequired": ["list key remaining required courses"],
-    "nextMilestone": "specific and meaningful next step for this student"
-  }
-}`,
-          },
-        ],
-      }),
-    })
-
-    const data = await response.json()
-    if (data.error) return NextResponse.json({ error: data.error.message || 'OpenRouter error' }, { status: 500 })
-
-    const raw = data.choices?.[0]?.message?.content?.trim() || ''
-    try {
-      const parsed = JSON.parse(raw)
-
-      // Filter out completed courses (safety net)
-      const filtered = (parsed.courseSchedule || [])
-        .map((sem: SemesterPlan) => ({
-          ...sem,
-          courses: sem.courses.filter(
-            (c: CourseWithDetails) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, ''))
-          ),
-          totalWorkload: sem.courses
-            .filter((c: CourseWithDetails) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, '')))
-            .reduce((sum: number, c: CourseWithDetails) => sum + (c.workload || 8), 0),
-        }))
-        .filter((sem: SemesterPlan) => sem.courses.length > 0)
-
-      return NextResponse.json({
-        message: parsed.message || '',
-        courseSchedule: filtered,
-        degreeProgress: parsed.degreeProgress || null,
-      })
-    } catch {
-      return NextResponse.json({ message: '', courseSchedule: [], degreeProgress: null })
-    }
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: msg }, { status: 500 })
-  }
-}
+RECOMMENDATION LOGIC:
+${hasMat157 && isSpecialist && isGradSchool ? '→ PUSH HARD: MAT257, MAT240, MAT267, STA257, MAT315, MAT327 — this student can handle it' : ''}
+${hasMat157 && !isGradSchool ? '→ MAT257, MAT240, STA257, cross into CS/Stats' : ''}
+${hasMat137 && !hasMat237 && isMath ? '→ MAT237, MAT246, MAT240 are immediate next steps' : ''}
+${isCS && !isHighCapacity ? '→ CSC263, CSC209, CSC369, CSC343 based on prereqs' : ''}
+${isCS && isHighCapacity ? '→ CSC263, CSC369, CSC373, CSC311, consider MAT337 for theory depth' : ''}
+${isStats && hasMat137 ? '→ STA237/STA257, MAT237,
