@@ -1,31 +1,23 @@
 import { NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) return NextResponse.json({ error: 'OPENROUTER_API_KEY not configured' }, { status: 500 })
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 })
 
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://uof-t-ai-assistant.vercel.app',
-        'X-Title': 'UofT AI Assistant',
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a UofT academic advisor. You MUST respond with ONLY a raw JSON object. Do NOT use markdown code blocks. Do NOT write ```json. Do NOT add any text before or after the JSON. Start your response directly with { and end with }.',
-          },
-          {
-            role: 'user',
-            content: `Analyze professors who teach ${courseCode} at University of Toronto.
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: { responseMimeType: 'application/json' },
+    })
+
+    const prompt = `You are a UofT academic advisor with knowledge of Rate My Professors and Reddit r/UofT.
+
+Analyze professors who teach ${courseCode} at University of Toronto.
 
 Student profile:
 - Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
@@ -33,7 +25,7 @@ Student profile:
 - Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
 - Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
 
-Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return this JSON object:
+Return a JSON object with this exact structure:
 {
   "courseCode": "${courseCode}",
   "courseName": "full course name",
@@ -62,30 +54,17 @@ Based on your knowledge of RMP reviews and Reddit r/UofT discussions, return thi
       "enrollmentTrend": "stable"
     }
   ]
-}`,
-          },
-        ],
-      }),
-    })
+}`
 
-    const data = await response.json()
-    const raw = data.choices?.[0]?.message?.content?.trim() || ''
-
-    const cleaned = raw
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim()
-
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return NextResponse.json({ error: 'Could not parse response', raw, cleaned }, { status: 500 })
-    }
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
 
     try {
-      return NextResponse.json(JSON.parse(jsonMatch[0]))
+      return NextResponse.json(JSON.parse(text))
     } catch {
-      return NextResponse.json({ error: 'JSON parse failed', raw }, { status: 500 })
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response', raw: text }, { status: 500 })
+      return NextResponse.json(JSON.parse(jsonMatch[0]))
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
