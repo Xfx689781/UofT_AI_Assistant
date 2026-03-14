@@ -97,8 +97,11 @@ function RadarChart({ dimensions, matchScore }: { dimensions: ProfessorDimension
         const a = i * angleStep - Math.PI / 2
         const r = maxR + 18
         return (
-          <text key={i} x={(cx + r * Math.cos(a)).toFixed(1)} y={(cy + r * Math.sin(a)).toFixed(1)}
-            textAnchor="middle" dominantBaseline="middle" fontSize="8.5" fill="#8b9aad">
+          <text key={i}
+            x={(cx + r * Math.cos(a)).toFixed(1)}
+            y={(cy + r * Math.sin(a)).toFixed(1)}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize="8.5" fill="#8b9aad">
             {k.label}
           </text>
         )
@@ -170,8 +173,6 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
 
       {expanded && (
         <div className="px-4 pb-5 border-t border-[#1e2a3a] space-y-4">
-
-          {/* Radar + match breakdown */}
           <div className="pt-4 flex flex-col sm:flex-row gap-4 items-center">
             <RadarChart dimensions={prof.dimensions} matchScore={prof.matchScore || 0} />
             <div className="flex-1 space-y-2 w-full">
@@ -186,7 +187,8 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
                     <div key={label} className="flex items-center gap-2">
                       <span className="text-xs text-[#8b9aad] w-32 shrink-0">{label}</span>
                       <div className="flex-1 h-1.5 bg-[#1e2a3a] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0066CC] rounded-full" style={{ width: `${(val / max) * 100}%` }} />
+                        <div className="h-full bg-[#0066CC] rounded-full"
+                          style={{ width: `${(val / max) * 100}%` }} />
                       </div>
                       <span className="text-xs text-white w-12 text-right">{val}/{max}</span>
                     </div>
@@ -196,13 +198,11 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
             </div>
           </div>
 
-          {/* Compatibility */}
           <div className="bg-[#002A5C]/20 border border-[#0066CC]/20 rounded-lg p-3">
             <p className="text-xs text-[#0066CC] font-semibold mb-1">🎯 Why this matches you</p>
             <p className="text-[#c8d4e0] text-sm">{prof.studentCompatibility}</p>
           </div>
 
-          {/* Research */}
           {prof.hasResearch && (
             <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
               <p className="text-xs text-purple-400 font-semibold mb-1">🔬 Research Background</p>
@@ -211,7 +211,6 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
             </div>
           )}
 
-          {/* Teaching & Exam */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-[#0a0e14] rounded-lg p-3">
               <p className="text-xs text-[#8b9aad] mb-1">🎓 Teaching Style</p>
@@ -223,20 +222,17 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
             </div>
           </div>
 
-          {/* Tags */}
           <div className="flex flex-wrap gap-2">
             {prof.tags?.map(tag => (
               <span key={tag} className="px-2 py-1 rounded-full bg-[#1e2a3a] text-[#8b9aad] text-xs">{tag}</span>
             ))}
           </div>
 
-          {/* Best for */}
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
             <p className="text-xs text-green-400 mb-1">✅ Best For</p>
             <p className="text-white text-sm">{prof.bestFor}</p>
           </div>
 
-          {/* Warning */}
           {prof.warnings && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
               <p className="text-xs text-yellow-400 mb-1">⚠️ Heads Up</p>
@@ -244,7 +240,6 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
             </div>
           )}
 
-          {/* Quotes */}
           {prof.recentQuotes?.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs text-[#8b9aad] font-semibold">💬 What students say</p>
@@ -280,14 +275,14 @@ export function ProfessorSearch({ studentProfile }: { studentProfile: Onboarding
       })
       const json = await res.json()
       if (json.notFound) {
-        setError(`No recent data found for ${courseCode.toUpperCase()}. This course may not exist or hasn't been offered recently. Try checking the course code (e.g. MAT237Y1).`)
+        setError(`No recent data found for ${courseCode.toUpperCase()}. Check the course code and try again (e.g. MAT237Y1).`)
       } else if (json.error) {
         setError(json.error)
       } else {
         setData(json)
       }
     } catch {
-      setError('Failed to load professor data')
+      setError('Failed to load professor data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -297,7 +292,7 @@ export function ProfessorSearch({ studentProfile }: { studentProfile: Onboarding
     <div className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
       <h2 className="text-lg font-semibold text-white mb-1">👨‍🏫 Professor Lens</h2>
       <p className="text-sm text-[#8b9aad] mb-4">
-        AI-powered analysis using RMP, Reddit r/UofT, and your learning profile. Based on recent years (2023–2025).
+        AI analysis using RMP, Reddit r/UofT, and your learning profile (2023–2025 data)
       </p>
 
       <div className="flex gap-2 mb-4">
@@ -330,24 +325,22 @@ export function ProfessorSearch({ studentProfile }: { studentProfile: Onboarding
 
       {data && (
         <div className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-white font-semibold text-lg">{data.courseCode} — {data.courseName}</h3>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <p className="text-xs text-[#8b9aad]">{data.professors.length} professors analyzed</p>
-                {data.yearsFound && data.yearsFound.length > 0 && (
-                  <span className="text-xs text-[#6b7a8d]">📅 Data from {data.yearsFound.join(', ')}</span>
-                )}
-                {data.dataConfidence && (
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    data.dataConfidence === 'high' ? 'bg-green-500/20 text-green-400' :
-                    data.dataConfidence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {data.dataConfidence} confidence
-                  </span>
-                )}
-              </div>
+          <div>
+            <h3 className="text-white font-semibold text-lg">{data.courseCode} — {data.courseName}</h3>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <p className="text-xs text-[#8b9aad]">{data.professors.length} professors analyzed</p>
+              {data.yearsFound && data.yearsFound.length > 0 && (
+                <span className="text-xs text-[#6b7a8d]">📅 {data.yearsFound.join(', ')}</span>
+              )}
+              {data.dataConfidence && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  data.dataConfidence === 'high' ? 'bg-green-500/20 text-green-400' :
+                  data.dataConfidence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {data.dataConfidence} confidence
+                </span>
+              )}
             </div>
           </div>
 
