@@ -10,14 +10,13 @@ export async function POST(req: Request) {
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    // Step 1: Search for real professor data
     const searches = await Promise.all([
       fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
-          query: `${courseCode} UofT professor 2024 2025 who teaches`,
+          query: `${courseCode} UofT professor 2023 2024 2025 who teaches University Toronto`,
           search_depth: 'advanced',
           max_results: 5,
         }),
@@ -27,7 +26,7 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
-          query: `${courseCode} University of Toronto ratemyprofessors review`,
+          query: `${courseCode} University of Toronto ratemyprofessors rating review`,
           search_depth: 'advanced',
           max_results: 5,
         }),
@@ -37,7 +36,7 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
-          query: `site:reddit.com/r/UofT ${courseCode} professor section recommendation`,
+          query: `reddit r/UofT ${courseCode} professor which section best`,
           search_depth: 'advanced',
           max_results: 5,
         }),
@@ -48,15 +47,6 @@ export async function POST(req: Request) {
       .flatMap(s => s.results || [])
       .map((r: { url: string; content: string }) => `[${r.url}]\n${r.content}`)
       .join('\n\n')
-
-    // Step 2: Analyze with AI
-    const studentLearningProfile = `
-- Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
-- Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
-- Learning style: ${studentProfile?.learningStyle || 'not specified'}
-- Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
-- Interests: ${JSON.stringify(studentProfile?.interests || [])}
-`
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -72,43 +62,45 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert UofT academic advisor. Analyze professor data from real search results.
+            content: `You are an expert UofT academic advisor analyzing historical professor data.
 CRITICAL RULES:
 - Only use professor names found in the search results. Do NOT invent names.
-- If a professor name appears in search results, use their exact full name.
-- Base all scores on evidence from the search results.
-- If data is limited, say so in warnings.
+- This is HISTORICAL data (past years) — note that as a reference for future enrollment
+- Calculate match scores based on student profile alignment
+- Return TOP 2 most matched professors
 - You must respond with only a valid JSON object.`,
           },
           {
             role: 'user',
-            content: `Analyze professors for ${courseCode} at University of Toronto.
+            content: `Analyze historical professors for ${courseCode} at University of Toronto.
 
-REAL SEARCH DATA (use only names found here):
+REAL SEARCH DATA:
 ${context}
 
 Student profile:
-${studentLearningProfile}
+- Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
+- Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
+- Learning style: ${studentProfile?.learningStyle || 'not specified'}
+- Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
+- Interests: ${JSON.stringify(studentProfile?.interests || [])}
 
-For each professor found in the search data:
-1. Calculate a MATCH SCORE (0-100%) based on alignment between:
-   - Student's learning style vs professor's teaching style
-   - Student's goals vs professor's strengths
-   - Student's completed courses vs professor's course difficulty level
+MATCH SCORE calculation (0-100):
+- Learning style alignment: 40 points
+  (lecture-based student + structured prof = high, self-study student + flexible prof = high)
+- Goals alignment: 35 points
+  (grad school student + research-active rigorous prof = high)
+- Difficulty fit: 25 points
+  (match student's completed course difficulty to professor's course demands)
 
-2. Analyze:
-   - Does this professor have active research? What field?
-   - Is their research field consistent with what they teach?
-   - Teaching style breakdown
-   - Student learning style compatibility
-
-Return this JSON:
+Return TOP 2 professors sorted by matchScore. Return this JSON:
 {
   "courseCode": "${courseCode}",
   "courseName": "full official course name",
-  "recommendedFor": "Most matched professor name",
-  "recommendationReason": "detailed personalized reason based on student profile",
-  "studentLearningAnalysis": "2-3 sentences analyzing this student's learning profile and what type of professor suits them",
+  "isHistorical": true,
+  "historicalNote": "Based on professors who taught this course in recent years (2022-2025). New year's schedule TBA.",
+  "studentLearningAnalysis": "2-3 sentences analyzing this student's profile and what teaching style suits them best",
+  "recommendedFor": "Name of top matched professor",
+  "recommendationReason": "Detailed personalized reason",
   "professors": [
     {
       "name": "Exact name from search results only",
@@ -117,9 +109,9 @@ Return this JSON:
       "rmpDifficulty": 3.5,
       "numRatings": 45,
       "hasResearch": true,
-      "researchArea": "Differential geometry and topology",
-      "teachingResearchAlignment": "High — teaches MAT257 which directly relates to his research in smooth manifolds",
-      "dimensions": {
+      "researchArea": "e.g. Differential geometry",
+      "teachingResearchAlignment": "How their research relates to what they teach",
+      "radarData": {
         "teachingClarity": 8,
         "examPredictability": 7,
         "accessibility": 9,
@@ -127,14 +119,14 @@ Return this JSON:
         "workload": 5,
         "engagement": 8
       },
-      "teachingStyleAnalysis": "Lecture-heavy with emphasis on rigorous proofs. Encourages student participation during office hours rather than in class.",
-      "studentCompatibility": "Best for students who prefer structured learning and are comfortable with abstract mathematics.",
-      "examStyle": "Proof-based, similar to problem sets. 3-hour final worth 50%.",
-      "bestFor": "Students aiming for grad school in pure math",
-      "warnings": "First 3 weeks are very dense, attend every lecture",
-      "tags": ["#ProofHeavy", "#GoodOfficeHours", "#ResearchActive", "#BellCurve"],
-      "recentQuotes": ["paraphrased feedback from search results", "another paraphrased quote"],
-      "enrollmentTrend": "stable"
+      "teachingStyleAnalysis": "Detailed teaching style description",
+      "studentCompatibility": "Why this prof suits or doesn't suit this specific student",
+      "examStyle": "Exam format description",
+      "bestFor": "Type of student who thrives",
+      "warnings": "Honest heads up",
+      "tags": ["#ProofHeavy", "#GoodOfficeHours"],
+      "recentQuotes": ["paraphrased student feedback 1", "paraphrased feedback 2"],
+      "yearsTaught": ["2023", "2024"]
     }
   ]
 }`,
