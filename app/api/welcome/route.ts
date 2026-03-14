@@ -26,35 +26,20 @@ export async function POST(req: Request) {
     if (!openrouterKey) return NextResponse.json({ error: 'Config error' }, { status: 500 })
 
     const profile = await req.json()
-    const { 
-      name, 
-      programOfStudy, 
-      admissionCategory, 
-      interests, 
-      learningStyle, 
-      coursesCompleted 
-    } = profile
+    const { name, programOfStudy, admissionCategory, interests, learningStyle, coursesCompleted } = profile
     
-    const program = programOfStudy || admissionCategory
+    const program = programOfStudy || admissionCategory || 'General Studies'
     const completedSet = new Set((coursesCompleted || []).map((c: string) => c.toUpperCase().replace(/\s/g, '')))
 
-    // 1. 动态构建个性化指令 (核心改动)
-    // 根据用户的兴趣和风格，动态调整 AI 的选课权重
     const personalizationPrompt = `
-      USER ACADEMIC PROFILE:
-      - Name: ${name}
-      - Primary Interests: ${interests?.join(', ') || 'General Academic'}
-      - Preferred Learning Style: ${learningStyle || 'Standard'}
-      
-      PLANNING GUIDELINES:
-      - If interested in 'Pure Mathematics', prioritize Specialist-stream courses (e.g., MAT351, MAT357) over general electives.
-      - If 'Practice-heavy', select courses with labs or projects.
-      - If 'Self-study', suggest advanced seminar-style courses.
-      - Ensure the plan is strictly aligned with the ${program} requirements.
-      - For every course added, provide a 'reason' that explicitly connects back to the user's interests (e.g., "Perfect for your interest in Pure Math").
+      USER PROFILE: ${name}, ${program}, Interests: ${interests?.join(', ')}, Style: ${learningStyle}.
+      RULES:
+      1. MUST return exactly 5 courses per semester.
+      2. If a course is not in the calendar, use a logical placeholder.
+      3. Reason must be 1 sentence connecting to user interests.
+      4. ALWAYS return empty arrays [] if no data is found for a field.
     `
 
-    // 2. 调用 AI
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -65,45 +50,37 @@ export async function POST(req: Request) {
         model: 'openai/gpt-4o',
         response_format: { type: 'json_object' },
         messages: [
-          {
-            role: 'system',
-            content: `You are an expert UofT Academic Advisor. ${personalizationPrompt}`
-          },
-          {
-            role: 'user',
-            content: `Generate a 4-year degree plan. 
-            Completed courses (DO NOT INCLUDE): ${JSON.stringify(Array.from(completedSet))}.
-            
-            Return ONLY JSON:
-            {
-              "message": "A personalized greeting and tip for ${name}.",
-              "courseSchedule": [
-                {
-                  "semester": "First Year Fall",
-                  "totalWorkload": 25,
-                  "courses": [
-                    { "code": "...", "name": "...", "type": "...", "workload": 10, "reason": "Tailored to your interest in..." }
-                  ]
-                }
-              ],
-              "degreeProgress": { ... }
-            }`
-          }
+          { role: 'system', content: `You are an expert UofT Advisor. ${personalizationPrompt}` },
+          { role: 'user', content: `Generate a 4-year plan. JSON format with courseSchedule[] and degreeProgress{}.` }
         ],
       }),
     })
 
-    const data = await response.json()
-    let parsed = JSON.parse(data.choices[0].message.content)
+    const rawData = await response.json()
+    let parsed = JSON.parse(rawData.choices[0].message.content)
 
-    // 3. 后端二次清洗
+    if (!Array.isArray(parsed.courseSchedule)) parsed.courseSchedule = [];
+    
     parsed.courseSchedule.forEach((sem: any) => {
-        sem.courses = sem.courses.filter((c: any) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, '')))
+        sem.courses = Array.isArray(sem.courses) ? sem.courses : [];
+        sem.courses = sem.courses.filter((c: any) => !completedSet.has(c.code?.toUpperCase().replace(/\s/g, '')));
     });
+
+    if (!parsed.degreeProgress) {
+        parsed.degreeProgress = { completedCredits: 0, requiredCredits: 20, remainingRequired: [] };
+    }
+    if (!Array.isArray(parsed.degreeProgress.remainingRequired)) {
+        parsed.degreeProgress.remainingRequired = [];
+    }
 
     return NextResponse.json(parsed)
 
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to generate plan' }, { status: 500 })
+    console.error("API Generation Error:", error);
+    return NextResponse.json({ 
+      error: 'Failed to generate plan',
+      courseSchedule: [], // 返回空结构防止前端崩溃
+      degreeProgress: { remainingRequired: [] }
+    }, { status: 500 })
   }
 }
