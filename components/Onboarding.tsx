@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 
 export interface OnboardingData {
   name: string
-  yearType: 'first' | 'second+' | ''
+  yearType: 'first' | 'second' | 'third+' | ''
   admissionCategory: string
   coursesTaken: string[]
   interests: string[]
@@ -55,7 +55,7 @@ const PROGRAM_TREE: { category: string; icon: string; programs: string[] }[] = [
     category: 'Physics & Astronomy', icon: '🔭',
     programs: [
       'Physics Specialist', 'Physics Major', 'Physics Minor',
-      'Astronomy & Physics Specialist', 'Astronomy & Astrophysics Major', 'Astronomy & Astrophysics Minor',
+      'Astronomy & Physics Specialist', 'Astronomy & Astrophysics Major',
     ],
   },
   {
@@ -156,11 +156,12 @@ const GOALS_FIRST_YEAR = [
   'Industry/tech job',
 ]
 
-const GOALS_SECOND_YEAR = [
+const GOALS_UPPER_YEAR = [
   'Graduate school / Research',
   'Industry job',
   'Double major/minor exploration',
   'Graduate as efficiently as possible',
+  'Build a strong theoretical foundation',
 ]
 
 const LEARNING_STYLES = [
@@ -200,10 +201,7 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-function TagInput({
-  tags, onTagsChange,
-  placeholder = 'Type course code and press Enter',
-}: {
+function TagInput({ tags, onTagsChange, placeholder = 'Type course code and press Enter' }: {
   tags: string[]
   onTagsChange: (tags: string[]) => void
   placeholder?: string
@@ -245,7 +243,6 @@ interface OnboardingProps { onComplete: () => void }
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [data, setData] = useState<OnboardingData>(defaultOnboardingData)
   const [stepIndex, setStepIndex] = useState(0)
-  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
 
   const steps = useMemo(() => {
     const base = ['name', 'year'] as const
@@ -253,7 +250,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     if (data.yearType === 'first') {
       return [...base, 'admission', 'courses-first', 'interests', 'goals-first', 'learning-style', 'study-preferences'] as const
     }
-    return [...base, 'program-category', 'program-select', 'courses-second', 'goals-second', 'learning-style', 'study-preferences'] as const
+    // second and third+ share same flow but different content
+    return [...base, 'program-category', 'program-select', 'courses-completed', 'goals-upper', 'learning-style', 'study-preferences'] as const
   }, [data.yearType])
 
   const currentStepId = steps[stepIndex]
@@ -268,11 +266,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
   const goNext = useCallback(() => {
     if (isLast) { saveOnboardingData(data); onComplete() }
-    else { setDirection('forward'); setStepIndex((i) => i + 1) }
+    else { setStepIndex((i) => i + 1) }
   }, [isLast, data, onComplete])
 
   const goBack = useCallback(() => {
-    setDirection('back')
     setStepIndex((i) => Math.max(0, i - 1))
   }, [])
 
@@ -290,15 +287,17 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       case 'program-select':
         if (data.programCategory === 'Other') return data.programOther.trim().length > 0
         return data.programOfStudy.length > 0
-      case 'courses-second': return true
-      case 'goals-second': return data.goalsSecondYear.length > 0
+      case 'courses-completed': return true
+      case 'goals-upper': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
       case 'study-preferences': return data.studyHoursPerWeek !== '' && data.examPreference !== '' && data.officeHoursImportance !== ''
       default: return false
     }
   }, [currentStepId, data])
 
-  void direction
+  // Common course chips
+  const firstYearCourses = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'CSC108', 'CSC110Y1', 'CSC148', 'CSC165', 'STA130', 'PHY131', 'PHY132', 'CHM135', 'CHM136', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100']
+  const upperYearCourses = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT235', 'MAT237', 'MAT240', 'MAT244', 'MAT246', 'MAT247', 'MAT257', 'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258', 'CSC263', 'STA237', 'STA238', 'STA247', 'PHY131', 'PHY132', 'BIO120', 'BIO130', 'PSY100', 'SOC100', 'ECO101', 'ECO102']
 
   return (
     <div className="min-h-screen bg-[#0a0e14] flex flex-col items-center justify-center p-6">
@@ -313,6 +312,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
         <div key={currentStepId} className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-8 shadow-xl">
 
+          {/* Name */}
           {currentStepId === 'name' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your name?</h2>
@@ -326,30 +326,52 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Year — 3 options */}
           {currentStepId === 'year' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">What year are you in?</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <h2 className="text-xl font-semibold text-white mb-2">Where are you in your journey?</h2>
+              <p className="text-sm text-[#8b9aad] mb-6">This helps us recommend the right courses for your next step</p>
+              <div className="space-y-3">
                 {[
-                  { value: 'first', title: 'First Year', sub: "Still exploring, haven't chosen a POSt yet" },
-                  { value: 'second+', title: 'Second Year +', sub: 'Already enrolled in a program of study' },
-                ].map(({ value, title, sub }) => (
+                  {
+                    value: 'first',
+                    title: '🎓 Starting First Year',
+                    sub: "About to begin at UofT — haven't chosen a POSt yet",
+                    detail: 'We\'ll recommend first-year courses and help you plan your POSt entry',
+                  },
+                  {
+                    value: 'second',
+                    title: '📚 Entering Second Year',
+                    sub: 'Completed first year, now entering a program of study',
+                    detail: 'We\'ll build on your first-year foundation and recommend your second-year path',
+                  },
+                  {
+                    value: 'third+',
+                    title: '🚀 Third Year and Beyond',
+                    sub: 'In your program, planning upper-year courses',
+                    detail: 'We\'ll recommend advanced courses tailored to your specialization and goals',
+                  },
+                ].map(({ value, title, sub, detail }) => (
                   <button key={value} type="button"
-                    onClick={() => update('yearType', value as 'first' | 'second+')}
-                    className={`text-left p-6 rounded-xl border-2 transition-all duration-200 ${
+                    onClick={() => update('yearType', value as 'first' | 'second' | 'third+')}
+                    className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 ${
                       data.yearType === value
                         ? 'border-[#0066CC] bg-[#002A5C]/50 shadow-lg shadow-[#0066CC]/20'
                         : 'border-[#1e2a3a] bg-[#0a0e14]/50 hover:border-[#0066CC]/60 hover:bg-[#002A5C]/20'
                     }`}
                   >
-                    <span className="text-2xl font-bold text-white block mb-1">{title}</span>
-                    <span className="text-sm text-[#8b9aad]">{sub}</span>
+                    <span className="text-lg font-bold text-white block mb-0.5">{title}</span>
+                    <span className="text-sm text-[#8b9aad] block">{sub}</span>
+                    {data.yearType === value && (
+                      <span className="text-xs text-[#0066CC] block mt-2">→ {detail}</span>
+                    )}
                   </button>
                 ))}
               </div>
             </>
           )}
 
+          {/* Admission category (first year only) */}
           {currentStepId === 'admission' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your admission category?</h2>
@@ -367,6 +389,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Courses taken (first year) */}
           {currentStepId === 'courses-first' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What courses have you taken so far?</h2>
@@ -375,13 +398,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
                 <p className="text-xs text-[#8b9aad] font-semibold mb-2">Common first year courses — click to add:</p>
                 <div className="flex flex-wrap gap-2">
-                  {['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'CSC108', 'CSC110Y1', 'CSC148', 'CSC165', 'STA130', 'STA237', 'PHY131', 'PHY132', 'CHM135', 'CHM136', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100'].map(c => (
+                  {firstYearCourses.map(c => (
                     <button key={c} type="button"
                       onClick={() => { if (!data.coursesTaken.includes(c)) update('coursesTaken', [...data.coursesTaken, c]) }}
                       className={`px-2 py-1 rounded text-xs font-mono transition-all ${
-                        data.coursesTaken.includes(c)
-                          ? 'bg-[#0066CC] text-white'
-                          : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]'
+                        data.coursesTaken.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]'
                       }`}
                     >{c}</button>
                   ))}
@@ -390,6 +411,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Interests (first year) */}
           {currentStepId === 'interests' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What are you interested in?</h2>
@@ -410,6 +432,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Goals first year */}
           {currentStepId === 'goals-first' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What are your goals?</h2>
@@ -425,6 +448,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Program category (upper year) */}
           {currentStepId === 'program-category' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What&apos;s your field of study?</h2>
@@ -447,13 +471,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Program select */}
           {currentStepId === 'program-select' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-1">
                 {data.programCategory === 'Other' ? 'Specify your program' : `Choose your ${data.programCategory} program`}
               </h2>
               {data.programCategory !== 'Other' && (
-                <button type="button" onClick={() => { setDirection('back'); setStepIndex(i => i - 1) }}
+                <button type="button" onClick={() => setStepIndex(i => i - 1)}
                   className="text-xs text-[#0066CC] hover:underline mb-4 block">← Change field</button>
               )}
               {data.programCategory === 'Other' ? (
@@ -479,21 +504,26 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {currentStepId === 'courses-second' && (
+          {/* Courses completed (upper year) */}
+          {currentStepId === 'courses-completed' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-2">Which courses have you completed?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Include ALL courses from previous years</p>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                {data.yearType === 'second' ? 'What courses did you take in first year?' : 'What courses have you completed?'}
+              </h2>
+              <p className="text-sm text-[#8b9aad] mb-4">
+                {data.yearType === 'second'
+                  ? 'Include all courses from your first year — this helps us know your prereqs'
+                  : 'Include all courses completed so far — we\'ll check prereqs automatically'}
+              </p>
               <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
               <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
-                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Common courses — click to add:</p>
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Click to add:</p>
                 <div className="flex flex-wrap gap-2">
-                  {['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT237', 'MAT240', 'MAT246', 'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'STA130', 'STA237', 'STA238', 'PHY131', 'PHY132', 'BIO120', 'BIO130', 'PSY100', 'SOC100', 'ECO101', 'ECO102'].map(c => (
+                  {upperYearCourses.map(c => (
                     <button key={c} type="button"
                       onClick={() => { if (!data.coursesCompleted.includes(c)) update('coursesCompleted', [...data.coursesCompleted, c]) }}
                       className={`px-2 py-1 rounded text-xs font-mono transition-all ${
-                        data.coursesCompleted.includes(c)
-                          ? 'bg-[#0066CC] text-white'
-                          : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]'
+                        data.coursesCompleted.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]'
                       }`}
                     >{c}</button>
                   ))}
@@ -502,11 +532,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
-          {currentStepId === 'goals-second' && (
+          {/* Goals upper year */}
+          {currentStepId === 'goals-upper' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What are your goals?</h2>
               <div className="space-y-3">
-                {GOALS_SECOND_YEAR.map((opt) => (
+                {GOALS_UPPER_YEAR.map((opt) => (
                   <button key={opt} type="button" onClick={() => update('goalsSecondYear', opt)}
                     className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all ${
                       data.goalsSecondYear === opt ? 'border-[#0066CC] bg-[#002A5C]/50 text-white' : 'border-[#1e2a3a] text-[#e8ecf1] hover:border-[#0066CC]/60'
@@ -517,6 +548,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Learning style */}
           {currentStepId === 'learning-style' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your learning style?</h2>
@@ -538,11 +570,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             </>
           )}
 
+          {/* Study preferences */}
           {currentStepId === 'study-preferences' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-6">A few more preferences</h2>
               <div className="space-y-6">
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">How many hours per week can you study?</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -557,7 +589,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">What exam format do you prefer?</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -579,7 +610,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">How important is professor accessibility?</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -601,7 +631,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">How do you prefer to contact professors? <span className="text-[#6b7a8d] font-normal">(optional)</span></p>
                   <div className="grid grid-cols-2 gap-2">
@@ -621,7 +650,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                     ))}
                   </div>
                 </div>
-
               </div>
             </>
           )}
