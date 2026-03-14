@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getOnboardingData, type OnboardingData } from '@/components/Onboarding'
 import Chat from '@/components/Chat'
 
+// --- 1. 接口定义 ---
 interface ProfessorDimensions {
   teachingClarity: number
   examPredictability: number
@@ -38,11 +39,12 @@ interface ProfessorData {
   recommendationReason: string
 }
 
+// --- 2. 辅助组件 ---
 function DimensionBar({ label, value }: { label: string; value: number }) {
   const getColor = (v: number) => {
     if (v >= 8) return '#22c55e'
-    if (v >= 5) return '#0066CC' 
-    return '#ef4444' 
+    if (v >= 5) return '#0066CC'
+    return '#ef4444'
   }
 
   return (
@@ -101,7 +103,6 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
   )
 }
 
-// --- 搜索组件 ---
 function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | null }) {
   const [courseCode, setCourseCode] = useState('')
   const [loading, setLoading] = useState(false)
@@ -111,7 +112,6 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
   async function handleSearch() {
     if (!courseCode.trim()) return
     setLoading(true); setError(''); setData(null)
-    
     try {
       const res = await fetch('/api/professor', {
         method: 'POST',
@@ -163,5 +163,46 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
   )
 }
 
-// --- Dashboard 主页面代码保持原样结构，只需确保正确导入上述组件 ---
-// ... (保留你之前的 return JSX 结构)
+// --- 3. 主页面导出 ---
+export default function DashboardPage() {
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const [profile, setProfile] = useState<OnboardingData | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    const data = getOnboardingData()
+    if (!data?.name) {
+      router.replace('/')
+    } else {
+      setProfile(data)
+    }
+  }, [router])
+
+  if (!mounted) return <div className="min-h-screen bg-[#0a0e14] flex items-center justify-center text-[#8b9aad]">Loading...</div>
+
+  return (
+    <div className="min-h-screen bg-[#0a0e14]">
+      <header className="border-b border-[#1e2a3a] bg-[#121922]/80 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <Link href="/dashboard" className="text-lg font-bold text-white">UofT AI Assistant</Link>
+          <div className="text-white text-sm">Welcome back, {profile?.name}</div>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
+              <h1 className="text-xl font-bold text-white">Dashboard Overview</h1>
+              <p className="text-[#8b9aad] mt-2">Personalized course plans and professor analytics.</p>
+            </section>
+            {profile && <ProfessorSearch studentProfile={profile} />}
+          </div>
+          <div className="lg:col-span-1">
+             <div className="sticky top-24"><Chat /></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
