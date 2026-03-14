@@ -10,16 +10,17 @@ export async function POST(req: Request) {
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
-    // Step 1: Search for real professor data
+    // Step 1: Search recent data only (2023-2025)
     const searches = await Promise.all([
       fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
-          query: `${courseCode} UofT professor 2024 2025 who teaches`,
+          query: `${courseCode} UofT professor 2024 2025 instructor University Toronto timetable`,
           search_depth: 'advanced',
           max_results: 5,
+          days: 730, // last 2 years only
         }),
       }).then(r => r.json()),
       fetch('https://api.tavily.com/search', {
@@ -27,9 +28,10 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
-          query: `${courseCode} University of Toronto ratemyprofessors review`,
+          query: `${courseCode} ratemyprofessors University Toronto 2023 2024 2025`,
           search_depth: 'advanced',
           max_results: 5,
+          days: 730,
         }),
       }).then(r => r.json()),
       fetch('https://api.tavily.com/search', {
@@ -37,25 +39,78 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           api_key: tavilyKey,
-          query: `site:reddit.com/r/UofT ${courseCode} professor section recommendation`,
+          query: `reddit r/UofT ${courseCode} professor 2023 2024 2025 which section`,
           search_depth: 'advanced',
           max_results: 5,
+          days: 730,
+        }),
+      }).then(r => r.json()),
+      // Also search UofT timetable directly
+      fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: tavilyKey,
+          query: `${courseCode} instructor site:ttb.calendars.utoronto.ca OR site:timetable.iit.artsci.utoronto.ca`,
+          search_depth: 'advanced',
+          max_results: 3,
         }),
       }).then(r => r.json()),
     ])
 
-    const context = searches
-      .flatMap(s => s.results || [])
-      .map((r: { url: string; content: string }) => `[${r.url}]\n${r.content}`)
+    const allResults = searches.flatMap(s => s.results || [])
+    const context = allResults
+      .map((r: { url: string; content: string; published_date?: string }) =>
+        `[${r.url}${r.published_date ? ` — ${r.published_date}` : ''}]\n${r.content}`)
       .join('\n\n')
 
-    // Step 2: Analyze with AI
-    const studentLearningProfile = `
+    // Check if course likely exists based on search results
+    const hasRelevantResults = allResults.some(r =>
+      r.content.toLowerCase().includes(courseCode.toLowerCase().replace('h1', '').replace('y1', ''))
+    )
+
+    if (!hasRelevantResults) {
+      return NextResponse.json({
+        error: `No data found for ${courseCode}. Please check the course code and try again.`,
+        notFound: true,
+      }, { status: 404 })
+    }
+
+    // Build detailed student profile for personalization
+    const learningStyleMap: Record<string, string> = {
+      'lecture': 'learns best through structured lectures, prefers clear explanations over self-discovery',
+      'practice': 'learns through repetition and problem-solving, needs many practice problems',
+      'self-study': 'independent learner, prefers reading and exploring concepts alone',
+      'collaborative': 'learns best in group settings, benefits from discussion',
+    }
+
+    const goalMap: Record<string, string> = {
+      'Graduate school / Research': 'aiming for graduate school, needs rigorous theoretical foundation',
+      'Industry job': 'focused on practical skills and industry-relevant experience',
+      'Double major/minor exploration': 'exploring multiple fields, needs flexibility',
+      'Graduate as efficiently as possible': 'wants to graduate quickly, needs clear grading and manageable workload',
+      'Get into Math/Stats/CS POSt': 'first year trying to get high GPA for competitive POSt admission',
+      'Explore before deciding': 'still exploring, needs engaging teaching to stay motivated',
+    }
+
+    const completedCourses = studentProfile?.coursesCompleted || studentProfile?.coursesTaken || []
+    const learningStyle = studentProfile?.learningStyle || ''
+    const goals = studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || ''
+    const studyHours = studentProfile?.studyHoursPerWeek || 'not specified'
+    const examPreference = studentProfile?.examPreference || 'not specified'
+    const officeHoursImportance = studentProfile?.officeHoursImportance || 'not specified'
+
+    const detailedProfile = `
+STUDENT PROFILE (use ALL of these for personalization):
 - Program: ${studentProfile?.programOfStudy || studentProfile?.admissionCategory || 'not specified'}
-- Goals: ${studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || 'not specified'}
-- Learning style: ${studentProfile?.learningStyle || 'not specified'}
-- Completed courses: ${JSON.stringify(studentProfile?.coursesCompleted || [])}
+- Goals: ${goals} → ${goalMap[goals] || goals}
+- Learning style: ${learningStyle} → ${learningStyleMap[learningStyle] || learningStyle}
+- Study hours per week: ${studyHours}
+- Exam preference: ${examPreference}
+- Office hours importance: ${officeHoursImportance}
+- Completed courses: ${JSON.stringify(completedCourses)}
 - Interests: ${JSON.stringify(studentProfile?.interests || [])}
+- Communication preference: ${studentProfile?.communicationPreference || 'not specified'}
 `
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -72,53 +127,78 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert UofT academic advisor. Analyze professor data from real search results.
-CRITICAL RULES:
-- Only use professor names found in the search results. Do NOT invent names.
-- If a professor name appears in search results, use their exact full name.
-- Base all scores on evidence from the search results.
-- If data is limited, say so in warnings.
-- You must respond with only a valid JSON object.`,
+            content: `You are an expert UofT academic advisor analyzing professor data.
+
+ANTI-HALLUCINATION RULES (CRITICAL):
+1. ONLY use professor names that EXPLICITLY appear in the search results
+2. If you cannot find ANY professor names in the search data, return {"notFound": true, "message": "No professor data found for this course in recent years"}
+3. NEVER invent, guess, or assume professor names
+4. If a name appears only once with no context, note low confidence in warnings
+5. Focus on 2023-2025 data only — ignore older mentions
+
+PERSONALIZATION RULES:
+- Match score MUST differ between different student profiles
+- A practice-heavy learner gets high score for prof who assigns many problem sets
+- A lecture-based learner gets high score for clear structured lectures
+- Grad school student gets high score for research-active rigorous profs
+- Industry student gets high score for applied, practical profs
+- Low office-hours-importance student should NOT penalize inaccessible profs heavily
+- High study hours student can handle higher workload profs`,
           },
           {
             role: 'user',
             content: `Analyze professors for ${courseCode} at University of Toronto.
 
-REAL SEARCH DATA (use only names found here):
+SEARCH DATA (2023-2025 only):
 ${context}
 
-Student profile:
-${studentLearningProfile}
+${detailedProfile}
 
-For each professor found in the search data:
-1. Calculate a MATCH SCORE (0-100%) based on alignment between:
-   - Student's learning style vs professor's teaching style
-   - Student's goals vs professor's strengths
-   - Student's completed courses vs professor's course difficulty level
+MATCH SCORE CALCULATION (must be personalized to THIS student):
+- Learning style alignment: 35 points
+  * lecture student + structured board-heavy prof = high
+  * practice student + problem-set-heavy prof = high  
+  * self-study student + minimal hand-holding prof = high
+  * collaborative student + discussion-based prof = high
+- Goals alignment: 35 points
+  * grad school + research-active rigorous prof = high
+  * industry + applied practical prof = high
+  * efficiency + clear grader generous curve = high
+  * POSt admission + manageable workload fair grader = high
+- Practical fit: 30 points
+  * office hours importance vs accessibility score
+  * study hours availability vs workload
+  * exam preference vs exam style
 
-2. Analyze:
-   - Does this professor have active research? What field?
-   - Is their research field consistent with what they teach?
-   - Teaching style breakdown
-   - Student learning style compatibility
+If no professor names found in search data, return:
+{"notFound": true, "message": "No recent professor data found for ${courseCode}. This course may not have been offered recently or the code may be incorrect."}
 
-Return this JSON:
+Otherwise return:
 {
   "courseCode": "${courseCode}",
-  "courseName": "full official course name",
-  "recommendedFor": "Most matched professor name",
-  "recommendationReason": "detailed personalized reason based on student profile",
-  "studentLearningAnalysis": "2-3 sentences analyzing this student's learning profile and what type of professor suits them",
+  "courseName": "official course name",
+  "dataConfidence": "high/medium/low",
+  "yearsFound": ["2024", "2023"],
+  "studentLearningAnalysis": "2-3 sentences analyzing THIS student's specific profile and what teaching style suits them — be specific about their learning style and goals",
+  "recommendedFor": "Professor Name",
+  "recommendationReason": "specific reason tied to THIS student's learning style, goals, and preferences",
   "professors": [
     {
-      "name": "Exact name from search results only",
-      "matchScore": 93.33,
+      "name": "Name from search only",
+      "yearsTaught": ["2024", "2023"],
+      "dataSource": "RMP + Reddit" or "Reddit only" or "Timetable only",
+      "matchScore": 87.5,
+      "matchBreakdown": {
+        "learningStyleFit": 30,
+        "goalsFit": 32,
+        "practicalFit": 25.5
+      },
       "rmpRating": 4.2,
       "rmpDifficulty": 3.5,
       "numRatings": 45,
       "hasResearch": true,
-      "researchArea": "Differential geometry and topology",
-      "teachingResearchAlignment": "High — teaches MAT257 which directly relates to his research in smooth manifolds",
+      "researchArea": "field if found",
+      "teachingResearchAlignment": "how research relates to teaching",
       "dimensions": {
         "teachingClarity": 8,
         "examPredictability": 7,
@@ -127,14 +207,14 @@ Return this JSON:
         "workload": 5,
         "engagement": 8
       },
-      "teachingStyleAnalysis": "Lecture-heavy with emphasis on rigorous proofs. Encourages student participation during office hours rather than in class.",
-      "studentCompatibility": "Best for students who prefer structured learning and are comfortable with abstract mathematics.",
-      "examStyle": "Proof-based, similar to problem sets. 3-hour final worth 50%.",
-      "bestFor": "Students aiming for grad school in pure math",
-      "warnings": "First 3 weeks are very dense, attend every lecture",
-      "tags": ["#ProofHeavy", "#GoodOfficeHours", "#ResearchActive", "#BellCurve"],
-      "recentQuotes": ["paraphrased feedback from search results", "another paraphrased quote"],
-      "enrollmentTrend": "stable"
+      "teachingStyleAnalysis": "detailed description",
+      "studentCompatibility": "why this prof specifically matches THIS student's profile",
+      "examStyle": "format and style",
+      "bestFor": "type of student",
+      "warnings": "honest heads up, note if data is limited",
+      "tags": ["#ProofHeavy"],
+      "recentQuotes": ["paraphrased from search data only"],
+      "enrollmentTrend": "rising/stable/dropping"
     }
   ]
 }`,
@@ -148,10 +228,15 @@ Return this JSON:
 
     const raw = data.choices?.[0]?.message?.content?.trim() || ''
     try {
-      return NextResponse.json(JSON.parse(raw))
+      const parsed = JSON.parse(raw)
+      // If AI says not found, return 404
+      if (parsed.notFound) {
+        return NextResponse.json({ error: parsed.message, notFound: true }, { status: 404 })
+      }
+      return NextResponse.json(parsed)
     } catch {
       const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response', raw }, { status: 500 })
+      if (!jsonMatch) return NextResponse.json({ error: 'Could not parse response' }, { status: 500 })
       return NextResponse.json(JSON.parse(jsonMatch[0]))
     }
   } catch (error: unknown) {
