@@ -1,6 +1,10 @@
+'use client'
+
+import { useState } from 'react'
+
 function MatchScore({ score }: { score: number }) {
-  const color = score >= 85 ? '#22c55e' : score >= 70 ? '#0066CC' : '#f59e0b'
-  return (
+const color = score >= 85 ? '#22c55e' : score >= 70 ? '#0066CC' : '#f59e0b'
+return (
     <div className="flex items-center gap-2">
       <div className="relative w-12 h-12">
         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
