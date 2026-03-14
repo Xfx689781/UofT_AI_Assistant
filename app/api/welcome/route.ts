@@ -24,27 +24,33 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: 'You are a UofT academic advisor. Return ONLY valid JSON, no markdown, no extra text.',
+            content: 'You are a UofT academic advisor. You MUST respond with ONLY a raw JSON object. Do NOT use markdown code blocks. Do NOT write ```json. Do NOT add any text before or after the JSON. Start your response directly with { and end with }.',
           },
           {
             role: 'user',
-            content: `Student: ${profile.name}
+            content: `Student name: ${profile.name}
 Program: ${program}
+Year type: ${profile.yearType}
 Completed courses: ${JSON.stringify(profile.coursesCompleted || profile.coursesTaken || [])}
 Goals: ${profile.goalsSecondYear || profile.goalsFirstYear || 'not specified'}
 Learning style: ${profile.learningStyle || 'not specified'}
-Year: ${profile.yearType}
+Interests: ${JSON.stringify(profile.interests || [])}
 
-Based on UofT Arts & Science requirements for "${program}", generate a personalized course plan.
+Based on UofT Arts & Science requirements for "${program}", generate a personalized academic plan.
 
-Return ONLY this JSON:
+Return this JSON object:
 {
-  "message": "warm 2-3 sentence welcome for ${profile.name} mentioning their program and one specific tip",
+  "message": "warm 2-3 sentence welcome for ${profile.name} mentioning their program and one specific academic tip",
   "courseSchedule": [
     {
       "semester": "Fall 2026",
       "courses": [
-        { "code": "MAT237", "name": "Multivariable Calculus", "reason": "Required for your program, prereqs met", "type": "required" }
+        {
+          "code": "MAT237",
+          "name": "Multivariable Calculus",
+          "reason": "Required for your program, prereqs met",
+          "type": "required"
+        }
       ]
     }
   ],
@@ -62,8 +68,18 @@ Return ONLY this JSON:
 
     const data = await response.json()
     const raw = data.choices?.[0]?.message?.content?.trim() || ''
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return NextResponse.json({ message: raw, courseSchedule: [], degreeProgress: null })
+
+    const cleaned = raw
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim()
+
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error('Raw response:', raw)
+      return NextResponse.json({ message: '', courseSchedule: [], degreeProgress: null })
+    }
 
     try {
       const parsed = JSON.parse(jsonMatch[0])
@@ -73,7 +89,7 @@ Return ONLY this JSON:
         degreeProgress: parsed.degreeProgress || null,
       })
     } catch {
-      return NextResponse.json({ message: raw, courseSchedule: [], degreeProgress: null })
+      return NextResponse.json({ message: '', courseSchedule: [], degreeProgress: null })
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
