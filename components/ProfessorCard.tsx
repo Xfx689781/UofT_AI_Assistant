@@ -1,10 +1,37 @@
 'use client'
 
 import { useState } from 'react'
-import { getOnboardingData, type OnboardingData } from '@/components/Onboarding'
+import type { OnboardingData } from '@/components/Onboarding'
 
-function MatchScore({ score }: { score: number }) {
-const color = score >= 85 ? '#22c55e' : score >= 70 ? '#0066CC' : '#f59e0b'
+interface ProfessorDimensions {
+  teachingClarity: number
+  examPredictability: number
+  accessibility: number
+  gradingFairness: number
+  workload: number
+  engagement: number
+}
+
+interface Professor {
+  name: string
+  matchScore: number
+  rmpRating: number
+  rmpDifficulty: number
+  numRatings: number
+  hasResearch: boolean
+  researchArea: string
+  teachingResearchAlignment: string
+  dimensions: ProfessorDimensions
+  teachingStyleAnalysis: string
+  studentCompatibility: string
+  examStyle: string
+  bestFor: string
+  warnings: string
+  tags: string[]
+  recentQuotes: string[]
+  enrollmentTrend: string
+}
+
 interface ProfessorData {
   courseCode: string
   courseName: string
@@ -13,7 +40,10 @@ interface ProfessorData {
   recommendationReason: string
   studentLearningAnalysis: string
 }
-return (
+
+function MatchScore({ score }: { score: number }) {
+  const color = score >= 85 ? '#22c55e' : score >= 70 ? '#0066CC' : '#f59e0b'
+  return (
     <div className="flex items-center gap-2">
       <div className="relative w-12 h-12">
         <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
@@ -50,32 +80,7 @@ function DimensionBar({ label, value }: { label: string; value: number }) {
 }
 
 function ProfessorCard({ prof, isRecommended }: {
-  prof: {
-    name: string
-    matchScore: number
-    rmpRating: number
-    rmpDifficulty: number
-    numRatings: number
-    hasResearch: boolean
-    researchArea: string
-    teachingResearchAlignment: string
-    dimensions: {
-      teachingClarity: number
-      examPredictability: number
-      accessibility: number
-      gradingFairness: number
-      workload: number
-      engagement: number
-    }
-    teachingStyleAnalysis: string
-    studentCompatibility: string
-    examStyle: string
-    bestFor: string
-    warnings: string
-    tags: string[]
-    recentQuotes: string[]
-    enrollmentTrend: string
-  }
+  prof: Professor
   isRecommended: boolean
 }) {
   const [expanded, setExpanded] = useState(isRecommended)
@@ -88,7 +93,7 @@ function ProfessorCard({ prof, isRecommended }: {
         className="w-full px-4 py-4 flex items-center justify-between hover:bg-white/5 transition-all">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-[#0066CC]/20 flex items-center justify-center text-white font-bold text-sm">
-            {prof.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+            {prof.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2 flex-wrap">
@@ -108,21 +113,18 @@ function ProfessorCard({ prof, isRecommended }: {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <MatchScore score={prof.matchScore} />
+          <MatchScore score={prof.matchScore || 0} />
           <span className="text-[#8b9aad]">{expanded ? '▲' : '▼'}</span>
         </div>
       </button>
 
       {expanded && (
         <div className="px-4 pb-5 space-y-4 border-t border-[#1e2a3a]">
-
-          {/* Student compatibility */}
           <div className="pt-4 bg-[#002A5C]/20 border border-[#0066CC]/20 rounded-lg p-3">
             <p className="text-xs text-[#0066CC] font-semibold mb-1">🎯 Compatibility with your profile</p>
             <p className="text-[#c8d4e0] text-sm">{prof.studentCompatibility}</p>
           </div>
 
-          {/* Research */}
           {prof.hasResearch && (
             <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
               <p className="text-xs text-purple-400 font-semibold mb-1">🔬 Research Background</p>
@@ -131,7 +133,6 @@ function ProfessorCard({ prof, isRecommended }: {
             </div>
           )}
 
-          {/* Dimensions */}
           <div className="space-y-2">
             <p className="text-xs text-[#8b9aad] font-semibold uppercase tracking-wide">Performance Metrics</p>
             <DimensionBar label="Teaching Clarity" value={prof.dimensions.teachingClarity} />
@@ -142,7 +143,6 @@ function ProfessorCard({ prof, isRecommended }: {
             <DimensionBar label="Engagement" value={prof.dimensions.engagement} />
           </div>
 
-          {/* Teaching & Exam style */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-[#0a0e14] rounded-lg p-3">
               <p className="text-xs text-[#8b9aad] mb-1">🎓 Teaching Style</p>
@@ -154,20 +154,17 @@ function ProfessorCard({ prof, isRecommended }: {
             </div>
           </div>
 
-          {/* Tags */}
           <div className="flex flex-wrap gap-2">
-            {prof.tags.map((tag: string) => (
+            {prof.tags.map(tag => (
               <span key={tag} className="px-2 py-1 rounded-full bg-[#1e2a3a] text-[#8b9aad] text-xs">{tag}</span>
             ))}
           </div>
 
-          {/* Best for */}
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
             <p className="text-xs text-green-400 mb-1">✅ Best For</p>
             <p className="text-white text-sm">{prof.bestFor}</p>
           </div>
 
-          {/* Warning */}
           {prof.warnings && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
               <p className="text-xs text-yellow-400 mb-1">⚠️ Heads Up</p>
@@ -175,11 +172,10 @@ function ProfessorCard({ prof, isRecommended }: {
             </div>
           )}
 
-          {/* Quotes */}
           {prof.recentQuotes?.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs text-[#8b9aad] font-semibold">💬 What students say</p>
-              {prof.recentQuotes.map((q: string, i: number) => (
+              {prof.recentQuotes.map((q, i) => (
                 <div key={i} className="bg-[#0a0e14] rounded-lg px-3 py-2 text-[#c8d4e0] text-sm italic">
                   &quot;{q}&quot;
                 </div>
@@ -192,7 +188,7 @@ function ProfessorCard({ prof, isRecommended }: {
   )
 }
 
-function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | null }) {
+export function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | null }) {
   const [courseCode, setCourseCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<ProfessorData | null>(null)
@@ -223,7 +219,7 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
     <div className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
       <h2 className="text-lg font-semibold text-white mb-1">👨‍🏫 Professor Lens</h2>
       <p className="text-sm text-[#8b9aad] mb-4">
-        AI-powered professor analysis using real RMP data, Reddit r/UofT discussions, and your learning profile
+        AI-powered analysis using real RMP data, Reddit r/UofT, and your learning profile
       </p>
 
       <div className="flex gap-2 mb-4">
@@ -244,7 +240,7 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
       {loading && (
         <div className="space-y-3">
           <p className="text-[#8b9aad] text-sm animate-pulse">
-            🔍 Searching RMP, Reddit r/UofT, and UofT timetable data...
+            🔍 Searching RMP, Reddit r/UofT, and UofT timetable...
           </p>
           {[1, 2].map(i => <div key={i} className="h-20 bg-[#0a0e14] rounded-xl animate-pulse" />)}
         </div>
@@ -259,7 +255,6 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
             <p className="text-xs text-[#8b9aad]">{data.professors.length} professors analyzed</p>
           </div>
 
-          {/* Student learning analysis */}
           {data.studentLearningAnalysis && (
             <div className="bg-[#1e2a3a]/50 border border-[#1e2a3a] rounded-xl p-4">
               <p className="text-xs text-[#0066CC] font-semibold mb-1">🧠 Your Learning Profile Analysis</p>
@@ -267,7 +262,6 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
             </div>
           )}
 
-          {/* Recommendation banner */}
           {data.recommendedFor && (
             <div className="bg-[#002A5C]/40 border border-[#0066CC]/50 rounded-xl p-4">
               <p className="text-[#0066CC] text-xs font-semibold mb-1">🎯 RECOMMENDED FOR YOU</p>
@@ -276,7 +270,6 @@ function ProfessorSearch({ studentProfile }: { studentProfile: OnboardingData | 
             </div>
           )}
 
-          {/* Professor cards sorted by match score */}
           <div className="space-y-3">
             {[...data.professors]
               .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
