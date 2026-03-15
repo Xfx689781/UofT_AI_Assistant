@@ -280,4 +280,4 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     </div>
   )
 }
-}
+
