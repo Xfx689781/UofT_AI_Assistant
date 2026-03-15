@@ -10,14 +10,15 @@ export async function POST(req: Request) {
     const { courseCode, studentProfile } = await req.json()
     if (!courseCode) return NextResponse.json({ error: 'courseCode required' }, { status: 400 })
 
+    // Serial searches to avoid rate limiting
     const search1 = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: tavilyKey,
-        query: courseCode + ' UofT professor 2024 2025 who teaches University Toronto',
+        query: courseCode + ' UofT instructor professor name teaches timetable 2024 2025',
         search_depth: 'advanced',
-        max_results: 5,
+        max_results: 6,
       }),
     }).then(r => r.json())
 
@@ -26,9 +27,9 @@ export async function POST(req: Request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: tavilyKey,
-        query: courseCode + ' University of Toronto ratemyprofessors review rating',
+        query: courseCode + ' University of Toronto ratemyprofessors professor review',
         search_depth: 'advanced',
-        max_results: 5,
+        max_results: 6,
       }),
     }).then(r => r.json())
 
@@ -37,19 +38,24 @@ export async function POST(req: Request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: tavilyKey,
-        query: 'reddit r/UofT ' + courseCode + ' professor which section best 2024',
+        query: 'reddit r/UofT ' + courseCode + ' professor section who took 2023 2024',
         search_depth: 'advanced',
         max_results: 5,
       }),
     }).then(r => r.json())
 
-    const context = [
+    const allResults = [
       ...(search1.results || []),
       ...(search2.results || []),
       ...(search3.results || []),
-    ].map((r: { url: string; content: string }) => '[' + r.url + ']\n' + r.content).join('\n\n')
+    ]
 
-    const program = studentProfile?.programOfStudy || studentProfile?.programOther || studentProfile?.admissionCategory || 'not specified'
+    const context = allResults
+      .map((r: { url: string; content: string }) => '[' + r.url + ']\n' + r.content)
+      .join('\n\n')
+
+    // Build student profile
+    const program = studentProfile?.programOfStudy || studentProfile?.programOther || studentProfile?.admissionCategory || ''
     const goals = studentProfile?.goalsSecondYear || studentProfile?.goalsFirstYear || ''
     const learningStyle = studentProfile?.learningStyle || ''
     const studyHours = studentProfile?.studyHoursPerWeek || ''
@@ -58,32 +64,146 @@ export async function POST(req: Request) {
     const shortAnswer = studentProfile?.shortAnswer || ''
     const selfAssessment = studentProfile?.selfAssessment || ''
     const futureDirection = studentProfile?.futureDirection || ''
+    const professorPref = studentProfile?.professorPreference || ''
     const interests = studentProfile?.interests || []
 
     const isGradSchool = goals.toLowerCase().includes('grad') || goals.toLowerCase().includes('research') || goals.toLowerCase().includes('theoretical')
     const needsSupport = officeHours === 'critical'
     const wantsChallenge = selfAssessment === 'strong' || isGradSchool
+    const isSelfStudy = learningStyle === 'self-study'
+    const isLecture = learningStyle === 'lecture'
+    const isPractice = learningStyle === 'practice'
+    const notNeededSupport = officeHours === 'not-needed'
     const lightLoad = studyHours === 'Under 10h'
     const heavyLoad = studyHours === '30h+'
+
+    // Detect preference signals from professor preference text
+    const prefLower = professorPref.toLowerCase()
+    const shortLower = shortAnswer.toLowerCase()
+    const wantsDemanding = prefLower.includes('push') || prefLower.includes('tough') || prefLower.includes('demanding') || prefLower.includes('hard') || prefLower.includes('don\'t care about rmp') || prefLower.includes('learn more') || shortLower.includes('challenge')
+    const wantsWarm = prefLower.includes('accessible') || prefLower.includes('clear') || prefLower.includes('warm') || prefLower.includes('support') || prefLower.includes('office hours') || prefLower.includes('rmp') || prefLower.includes('organized')
+    const wantsResearch = prefLower.includes('research') || prefLower.includes('grad school') || isGradSchool
+    const doesNotCareRMP = prefLower.includes('don\'t care') || prefLower.includes('not care') || prefLower.includes('rmp doesn') || notNeededSupport
+    const wantsRigor = wantsDemanding || (isSelfStudy && !needsSupport) || (wantsChallenge && !needsSupport)
 
     const studentArchetype = [
       isGradSchool ? 'GRAD_SCHOOL_BOUND' : '',
       goals.toLowerCase().includes('industry') ? 'INDUSTRY_FOCUSED' : '',
       needsSupport ? 'NEEDS_SUPPORT' : '',
+      notNeededSupport ? 'INDEPENDENT_LEARNER' : '',
       wantsChallenge ? 'WANTS_CHALLENGE' : '',
       lightLoad ? 'LIGHT_WORKLOAD_PREF' : '',
       heavyLoad ? 'CAN_HANDLE_HEAVY' : '',
-      learningStyle === 'lecture' ? 'LECTURE_LEARNER' : '',
-      learningStyle === 'practice' ? 'PRACTICE_LEARNER' : '',
-      learningStyle === 'self-study' ? 'SELF_STUDY_LEARNER' : '',
-      learningStyle === 'collaborative' ? 'COLLABORATIVE_LEARNER' : '',
-      examPref === 'proof-based' ? 'PROOF_EXAM_PREF' : '',
-      examPref === 'computation' ? 'COMPUTATION_PREF' : '',
+      isSelfStudy ? 'SELF_STUDY_LEARNER' : '',
+      isLecture ? 'LECTURE_LEARNER' : '',
+      isPractice ? 'PRACTICE_LEARNER' : '',
+      wantsDemanding ? 'WANTS_DEMANDING_PROF' : '',
+      wantsWarm ? 'WANTS_WARM_ACCESSIBLE_PROF' : '',
+      wantsResearch ? 'WANTS_RESEARCH_ALIGNED_PROF' : '',
+      wantsRigor ? 'WANTS_RIGOR' : '',
     ].filter(Boolean).join(', ')
 
-    const systemPrompt = 'You are a UofT professor recommendation engine. Your job is to match professors to a specific student based on their profile.\n\nCRITICAL: matchScore MUST be calculated based on the student profile. Different students MUST get different scores for the same professor.\n\nSCORING RULES (calculate each component carefully):\n\nlearningStyleFit (0-35 points):\n- LECTURE_LEARNER + professor known for clear structured lectures = 30-35\n- LECTURE_LEARNER + disorganized professor = 5-10\n- PRACTICE_LEARNER + professor who assigns many problem sets = 30-35\n- PRACTICE_LEARNER + theory-only professor = 8-12\n- SELF_STUDY_LEARNER + professor who posts notes and resources = 30-35\n- SELF_STUDY_LEARNER + attendance-mandatory professor = 10-15\n- COLLABORATIVE_LEARNER + discussion-based professor = 30-35\n\ngoalsFit (0-35 points):\n- GRAD_SCHOOL_BOUND + research-active rigorous professor = 30-35\n- GRAD_SCHOOL_BOUND + easy/lax professor = 5-15\n- INDUSTRY_FOCUSED + applied practical professor = 30-35\n- WANTS_CHALLENGE + demanding professor = 28-35\n- WANTS_CHALLENGE + easy professor = 5-15\n\npracticalFit (0-30 points):\n- NEEDS_SUPPORT + highly accessible professor = 25-30\n- NEEDS_SUPPORT + inaccessible professor = 5-10\n- LIGHT_WORKLOAD_PREF + heavy workload professor = 5-12\n- CAN_HANDLE_HEAVY + any workload = 22-30\n- PROOF_EXAM_PREF + proof-based exams = 25-30\n- COMPUTATION_PREF + computation exams = 25-30\n\nmatchScore = learningStyleFit + goalsFit + practicalFit (total out of 100)\n\nOnly use professor names found in the search data. Return only 2 professors. If no professors found return notFound:true.'
+    const systemPrompt = [
+      'You are a UofT professor recommendation engine. You find ONE best professor match for a specific student.',
+      '',
+      'ANTI-HALLUCINATION — THIS IS THE MOST IMPORTANT RULE:',
+      '1. You may ONLY use professor names that appear VERBATIM and EXPLICITLY in the search data.',
+      '2. Before including any professor, find the exact sentence in the search data that mentions their name AND connects them to ' + courseCode + '.',
+      '3. If a name appears in search results for a DIFFERENT course, it does NOT count for ' + courseCode + '.',
+      '4. Do NOT infer professor names from partial matches, department pages, or unrelated courses.',
+      '5. Do NOT use names that only appear in generic university pages without course connection.',
+      '6. If you cannot find at least one professor name clearly connected to ' + courseCode + ' in the search data, return {"notFound": true}.',
+      '7. Common trap: a Chinese or any foreign name appearing in search results may be a student, not a professor. Only use names explicitly labeled as instructor/professor/taught by.',
+      '',
+      'OUTPUT: Return exactly ONE professor — the best match for this student.',
+      'No RMP ratings. No difficulty scores. No enrollment trends.',
+      'Focus entirely on WHY this professor is the best fit for THIS student.',
+      '',
+      'MATCHING PHILOSOPHY:',
+      'The goal is not to find the highest-rated professor. It is to find the professor whose teaching style, rigor level, and approach best fits this specific student.',
+      '',
+      'PROFESSOR ARCHETYPES (use as reference when search data matches):',
+      'Demanding/Rigorous archetype (e.g. Almut Burchard style): High expectations, proves everything rigorously, does not hand-hold, students who struggle may find it hard but strong students love it. BEST FOR: SELF_STUDY_LEARNER, WANTS_CHALLENGE, GRAD_SCHOOL_BOUND, WANTS_DEMANDING_PROF, INDEPENDENT_LEARNER.',
+      'Warm/Organized archetype (e.g. Mary Pugh style): Clear organized lectures, accessible, students feel supported, very good RMP. BEST FOR: LECTURE_LEARNER, NEEDS_SUPPORT, WANTS_WARM_ACCESSIBLE_PROF, students who struggle.',
+      'Research-Active archetype (e.g. Soheil Behnezhad style): Cutting-edge content, high expectations, research-focused teaching. BEST FOR: GRAD_SCHOOL_BOUND, WANTS_RESEARCH_ALIGNED_PROF, WANTS_CHALLENGE.',
+      '',
+      'SCORING (internal, do not show):',
+      'For SELF_STUDY_LEARNER or INDEPENDENT_LEARNER or WANTS_DEMANDING_PROF: Demanding/Rigorous professor wins.',
+      'For LECTURE_LEARNER or NEEDS_SUPPORT or WANTS_WARM_ACCESSIBLE_PROF: Warm/Organized professor wins.',
+      'For GRAD_SCHOOL_BOUND + WANTS_RESEARCH_ALIGNED_PROF: Research-Active professor wins.',
+      'If student is WANTS_CHALLENGING and does NOT have NEEDS_SUPPORT: lean toward demanding prof even if RMP is lower.',
+      'If student says in their own words they want to be pushed -> demanding prof wins regardless of RMP.',
+      'If student says they need clear explanations and go to office hours -> warm prof wins.',
+    ].join('\n')
 
-    const userPrompt = 'Analyze professors for ' + courseCode + ' at UofT.\n\nSEARCH DATA:\n' + context + '\n\nSTUDENT PROFILE:\n- Program: ' + program + '\n- Goals: ' + goals + '\n- Learning style: ' + learningStyle + '\n- Study hours: ' + studyHours + '\n- Exam preference: ' + examPref + '\n- Office hours importance: ' + officeHours + '\n- Future direction: ' + futureDirection + '\n- Interests: ' + JSON.stringify(interests) + '\n- Self-assessment: ' + selfAssessment + '\n\nSTUDENT IN THEIR OWN WORDS:\n"' + shortAnswer + '"\n\nARCHETYPE: ' + studentArchetype + '\n\nUsing the scoring rules, calculate matchScore for each professor based on THIS student\'s archetype. The scores must be different from each other and reflect the student profile.\n\nReturn JSON:\n{\n  "courseCode": "' + courseCode + '",\n  "courseName": "exact course name",\n  "dataConfidence": "high/medium/low",\n  "yearsFound": ["2024"],\n  "studentLearningAnalysis": "2-3 sentences about why this student needs a specific type of professor for this course, referencing their archetype and own words",\n  "recommendedFor": "Professor Name",\n  "recommendationReason": "personalized reason referencing student archetype and short answer",\n  "professors": [\n    {\n      "name": "name from search only",\n      "matchScore": 87,\n      "matchBreakdown": {\n        "learningStyleFit": 30,\n        "goalsFit": 32,\n        "practicalFit": 25\n      },\n      "yearsTaught": ["2024"],\n      "dataSource": "RMP + Reddit",\n      "rmpRating": 4.2,\n      "rmpDifficulty": 3.5,\n      "numRatings": 45,\n      "hasResearch": true,\n      "researchArea": "research field",\n      "teachingResearchAlignment": "how research relates to teaching",\n      "dimensions": {\n        "teachingClarity": 8,\n        "examPredictability": 7,\n        "accessibility": 9,\n        "gradingFairness": 6,\n        "workload": 5,\n        "engagement": 8\n      },\n      "teachingStyleAnalysis": "teaching style description",\n      "studentCompatibility": "why this score for THIS specific student archetype ' + studentArchetype + ' — mention their learning style and goals directly",\n      "examStyle": "exam format",\n      "bestFor": "type of student",\n      "warnings": "heads up relevant to this student type",\n      "tags": ["#ProofHeavy"],\n      "recentQuotes": ["paraphrased student feedback"],\n      "enrollmentTrend": "stable"\n    }\n  ]\n}'
+    const userPrompt = [
+      'Find the single best professor match for this student taking ' + courseCode + ' at UofT.',
+      '',
+      'SEARCH DATA (only use professor names explicitly found here):',
+      context,
+      '',
+      'STUDENT PROFILE:',
+      '- Program: ' + program,
+      '- Goals: ' + goals,
+      '- Learning style: ' + learningStyle,
+      '- Study hours: ' + studyHours,
+      '- Exam preference: ' + examPref,
+      '- Office hours importance: ' + officeHours,
+      '- Future direction: ' + futureDirection,
+      '- Interests: ' + JSON.stringify(interests),
+      '- Self-assessment: ' + selfAssessment,
+      '',
+      'STUDENT IN THEIR OWN WORDS:',
+      '"' + shortAnswer + '"',
+      '',
+      'PROFESSOR PREFERENCE (what student said they want):',
+      '"' + professorPref + '"',
+      '',
+      'STUDENT ARCHETYPE: ' + studentArchetype,
+      '',
+      'TASK:',
+      '1. Scan the search data for professor names explicitly connected to ' + courseCode + '.',
+      '2. Pick the ONE professor whose style best matches this student archetype.',
+      '3. If the student archetype includes WANTS_DEMANDING_PROF or SELF_STUDY_LEARNER -> prefer the more rigorous professor.',
+      '4. If the student archetype includes NEEDS_SUPPORT or WANTS_WARM_ACCESSIBLE_PROF -> prefer the more accessible professor.',
+      '5. Write the match explanation in terms of the student\'s own words and archetype.',
+      '',
+      'FINAL VERIFICATION: Before responding, confirm the professor name appears verbatim in the search data above AND is connected to ' + courseCode + '. If not found, return notFound.',
+      '',
+      'Return ONLY this JSON:',
+      '{',
+      '  "courseCode": "' + courseCode + '",',
+      '  "courseName": "exact course name",',
+      '  "dataConfidence": "high/medium/low",',
+      '  "yearsFound": ["2024", "2023"],',
+      '  "studentLearningAnalysis": "2-3 sentences about what teaching style this student needs based on their archetype and own words",',
+      '  "professor": {',
+      '    "name": "exact name from search data only",',
+      '    "matchScore": 87,',
+      '    "matchBreakdown": {',
+      '      "learningStyleFit": 30,',
+      '      "goalsFit": 32,',
+      '      "practicalFit": 25',
+      '    },',
+      '    "whyThisStudent": "detailed explanation of why this professor is the best match for THIS student — reference their archetype (' + studentArchetype + '), their own words, and their specific needs. Be direct and specific.",',
+      '    "teachingStyle": "description of how this professor teaches",',
+      '    "bestFor": "type of student who thrives with this professor",',
+      '    "warnings": "honest heads up relevant to this student type, or empty string if none",',
+      '    "hasResearch": true,',
+      '    "researchArea": "field if found in search data",',
+      '    "dimensions": {',
+      '      "teachingClarity": 8,',
+      '      "examPredictability": 7,',
+      '      "accessibility": 9,',
+      '      "gradingFairness": 6,',
+      '      "workload": 5,',
+      '      "engagement": 8',
+      '    },',
+      '    "recentQuotes": ["paraphrased student feedback from search data, max 2"],',
+      '    "tags": ["#Rigorous", "#ProofHeavy"]',
+      '  }',
+      '}',
+    ].join('\n')
 
     const aiRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -110,20 +230,42 @@ export async function POST(req: Request) {
     try {
       const parsed = JSON.parse(raw)
       if (parsed.notFound) {
-        return NextResponse.json({ error: 'No professor data found for ' + courseCode + '. Try the full course code e.g. MAT237Y1.', notFound: true }, { status: 404 })
+        return NextResponse.json({
+          error: 'No professor data found for ' + courseCode + '. Try the full course code e.g. MAT237Y1.',
+          notFound: true,
+        }, { status: 404 })
       }
-      const top2 = parsed.professors
-        ? [...parsed.professors].sort((a: { matchScore: number }, b: { matchScore: number }) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 2)
-        : []
-      return NextResponse.json({ ...parsed, professors: top2 })
+      // Normalize: support both single professor and array
+      const prof = parsed.professor || (parsed.professors && parsed.professors[0])
+      if (!prof) {
+        return NextResponse.json({ error: 'No professor found', notFound: true }, { status: 404 })
+      }
+      return NextResponse.json({
+        courseCode: parsed.courseCode,
+        courseName: parsed.courseName,
+        dataConfidence: parsed.dataConfidence,
+        yearsFound: parsed.yearsFound,
+        studentLearningAnalysis: parsed.studentLearningAnalysis,
+        recommendedFor: prof.name,
+        recommendationReason: prof.whyThisStudent,
+        professors: [prof],
+      })
     } catch {
       const match = raw.match(/\{[\s\S]*\}/)
       if (!match) return NextResponse.json({ error: 'Could not parse response' }, { status: 500 })
       const parsed = JSON.parse(match[0])
-      const top2 = parsed.professors
-        ? [...parsed.professors].sort((a: { matchScore: number }, b: { matchScore: number }) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 2)
-        : []
-      return NextResponse.json({ ...parsed, professors: top2 })
+      const prof = parsed.professor || (parsed.professors && parsed.professors[0])
+      if (!prof) return NextResponse.json({ error: 'No professor found', notFound: true }, { status: 404 })
+      return NextResponse.json({
+        courseCode: parsed.courseCode,
+        courseName: parsed.courseName,
+        dataConfidence: parsed.dataConfidence,
+        yearsFound: parsed.yearsFound,
+        studentLearningAnalysis: parsed.studentLearningAnalysis,
+        recommendedFor: prof.name,
+        recommendationReason: prof.whyThisStudent,
+        professors: [prof],
+      })
     }
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error'
