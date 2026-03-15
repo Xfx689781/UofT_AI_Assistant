@@ -60,6 +60,8 @@ export async function POST(req: Request) {
     const yearLabel = yearType === 'first' ? 'First Year' : yearType === 'second' ? 'Second Year' : 'Third or Fourth Year'
     const targetFall = yearType === 'first' ? 'First Year Fall' : yearType === 'second' ? 'Second Year Fall' : 'Third Year Fall'
     const targetWinter = yearType === 'first' ? 'First Year Winter' : yearType === 'second' ? 'Second Year Winter' : 'Third Year Winter'
+    const targetFall2 = 'Fourth Year Fall'
+    const targetWinter2 = 'Fourth Year Winter'
 
     // Detect ambition signals from short answer
     const shortLower = shortAnswer.toLowerCase()
@@ -349,6 +351,15 @@ export async function POST(req: Request) {
       '  (a) Student is CS Specialist or theory-cs direction AND selfAssessment=strong AND isGradSchool, OR',
       '  (b) Student explicitly mentions CSC240 or discrete math in short answer',
       'Otherwise always use CSC165H1.',
+      '',
+      'TEMPLATE FLEXIBILITY RULES:',
+      '- First year: templates are mostly fixed (these are standard required sequences). Follow closely.',
+      '- Second year: templates are guidelines. Adjust based on student short answer and flags.',
+      '- Third/Fourth year: templates are starting points only. The student short answer and futureDirection are the primary guide. If student mentions specific courses they want, include them if prereqs are met. Be creative and personalized.',
+      '- For all years: NEVER violate prerequisites. Check every course against the prereq list before including.',
+      '- If student mentions a course explicitly: include it if prereqs allow, explain why in the reason field.',
+      '',
+      'PHYSICS SPECIALIST RULE: PHY151H1 is Fall, PHY152H1 is Winter. Both must appear for students who wants the physics specialist or graduate studies in physics.',
       '',
       'SHORT ANSWER IS MOST IMPORTANT. Read it and let it override template defaults.',
       'If student says "I want to challenge myself" or "I love math" -> push MAT157Y1.',
