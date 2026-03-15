@@ -195,7 +195,7 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-function TagInput({ tags, onTagsChange, placeholder = 'Type your courses if they're not on the checkboxes' }: {
+function TagInput({ tags, onTagsChange, placeholder = 'Type your courses if not on the list below' }: {
   tags: string[]
   onTagsChange: (tags: string[]) => void
   placeholder?: string
