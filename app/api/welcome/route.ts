@@ -130,7 +130,7 @@ export async function POST(req: Request) {
       'MAT454H1=Complex Analysis II (H1)',
       'MAT457H1=Advanced Real Analysis I (H1)',
       'MAT458H1=Advanced Real Analysis II (H1)',
-      'MAT464H1=Riemannian Geometry (H1)",
+      'MAT464H1=Riemannian Geometry (H1)',
       'MAT475H1=Problem Solving Seminar (H1)',
       'APM421H1=Mathematical Foundations of Quantum Mechanics and Quantum Information Theory (H1)',
       'APM346H1=Partial Differential Equations (H1)',
