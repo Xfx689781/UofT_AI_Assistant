@@ -547,7 +547,10 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             <button type="button" onClick={goBack} disabled={isFirst}
               className="px-4 py-2 rounded-lg text-[#8b9aad] hover:text-white disabled:opacity-0 transition-colors"
             >Back</button>
-            </div>
+            <button type="button" onClick={goNext} disabled={!canProceed}
+              className="px-6 py-2 rounded-lg bg-[#0066CC] text-white font-medium hover:bg-[#0052a3] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >{isLast ? 'Finish' : 'Next'}</button>
+          </div>
         </div>
 
         <p className="mt-4 text-center text-[#6b7a8d] text-xs">
@@ -557,7 +560,3 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     </div>
   )
 }
-
-
-
-  
