@@ -350,6 +350,7 @@ export async function POST(req: Request) {
     ].join('\n')
 
     const prereqList = [
+      'MAT136H1 needs MAT135H1',
       'MAT257Y1 needs MAT157Y1 and MAT247H1',
       'MAT267H1 needs MAT157Y1 and MAT240H1',
       'MAT247H1 needs MAT240H1',
@@ -398,9 +399,9 @@ export async function POST(req: Request) {
       'STA237H1 needs (MAT136H1 or MAT137Y1) and STA130H1',
       'STA247H1 needs (MAT136H1 or MAT137Y1) and STA130H1',
       'STA257H1 needs (MAT137Y1 or MAT157Y1) and STA130H1 and (CSC111H1 or CSC148H1)',
-      'STA261H1 needs STA257H1',
-      'STA238H1 needs STA237H1',
-      'STA248H1 needs STA247H1',
+      'STA261H1 needs STA257H1 already completed — cannot take STA237H1 and STA238H1 in the same plan',
+      'STA238H1 needs STA237H1 already completed — cannot take STA237H1 and STA238H1 in the same plan',
+      'STA248H1 needs STA247H1 already completed — cannot take STA237H1 and STA238H1 in the same plan',
       'STA302H1 needs STA238H1 and MAT223H1',
       'STA303H1 needs STA302H1',
       'STA347H1 needs MAT237Y1 and (STA257H1 or STA247H1(67%))',
@@ -591,9 +592,11 @@ export async function POST(req: Request) {
       'Winter: MAT157Y1(Y1) continues + PHY152H1 + MAT240H1 + (CSC148H1) + (CSC165/240H1) + ECO102H1',
       'Total: 8~12.',
       '',
-      'Economics/Commerce:',
+      'Economics/Rotman Commerce:',
       'Fall: MAT133Y1(Y1) + ECO101H1 + PSY100H1 + RSM100H1',
       'Winter: MAT133Y1(Y1) continues + ECO102H1 + RSM219H1 + SOC100H1',
+      'NOTE: Rotman Commerce students take MAT133Y1, NOT MAT135/136/137. RSM100H1 and RSM219H1 are also required.',
+      'Do NOT give MAT135/136/137 to commerce/economics students unless they explicitly ask for it.',
       'Total: 6~9.',
     ].join('\n')
 
