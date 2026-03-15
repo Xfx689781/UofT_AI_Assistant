@@ -452,7 +452,6 @@ export async function POST(req: Request) {
     ].join('\n')
 
     const futureDirectionMap: Record<string, string> = {
-      const futureDirectionMap: Record<string, string> = {
   'ml-ai': 'Direction: Machine Learning / AI. Key upper courses to work toward (if prereqs met): CSC311H1, CSC412H1, CSC413H1, CSC486H1, STA314H1, STA414H1, CSC384H1, CSC420H1. Check completed flags to see what is already done and what is next.',
   'systems': 'Direction: Systems / Low-Level. Key upper courses: CSC369H1, CSC458H1, CSC469H1, CSC373H1, CSC473H1, CSC448H1. Check what is completed and build from there.',
   'theory-cs': 'Direction: Theory of CS. Key upper courses: CSC373H1, CSC448H1, CSC463H1, CSC473H1, APM461H1, MAT309H1, MAT344H1. Strong students should also consider MAT315H1 and MAT401H1.',
@@ -644,7 +643,7 @@ const thirdYearTemplates = [
   '- Fourth Year Fall: more advanced courses, start of capstone/research if applicable',
   '- Fourth Year Winter: most advanced courses, finish degree requirements, breadth',
   '',
-  'BREADTH: At least 1-2 courses outside main department somewhere across the 4 semesters.',
+  'BREADTH: At least 1~2 courses outside main department somewhere across the 4 semesters.',
   '',
   'REFERENCE POOLS BY DIRECTION (use as inspiration, not as fixed plans):',
   '- CS ML: CSC311->CSC412+CSC413, CSC384, CSC486, STA302->STA347->STA314->STA414, CSC420, CSC494',
