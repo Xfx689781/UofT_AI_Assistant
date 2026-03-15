@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const yearType = profile.yearType || 'first'
     const interests = profile.interests || []
     const learningStyle = profile.learningStyle || ''
-    const studyHours = profile.studyHoursPerWeek || '10–20h'
+    const studyHours = profile.studyHoursPerWeek || '10-20h'
     const examPref = profile.examPreference || ''
 
     const completedSet = new Set(completed.map((c: string) => c.toUpperCase().replace(/\s/g, '')))
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const hasMat137 = completedSet.has('MAT137Y1') || completedSet.has('MAT137')
     const hasMat237 = completedSet.has('MAT237Y1') || completedSet.has('MAT237')
     const hasMat240 = completedSet.has('MAT240H1') || completedSet.has('MAT240')
-    const isHighCapacity = studyHours === '20–30h' || studyHours === '30h+' || hasMat157
+    const isHighCapacity = studyHours === '20-30h' || studyHours === '30h+' || hasMat157
     const isGradSchool = goals.toLowerCase().includes('grad') || goals.toLowerCase().includes('research') || goals.toLowerCase().includes('theoretical')
     const isIndustry = goals.toLowerCase().includes('industry') || goals.toLowerCase().includes('job')
     const isMath = program.toLowerCase().includes('math') || interests.includes('Pure Mathematics')
@@ -35,6 +35,17 @@ export async function POST(req: Request) {
     const isPsych = program.toLowerCase().includes('psych') || interests.includes('Psychology')
     const isSpecialist = program.toLowerCase().includes('specialist')
     const yearLabel = yearType === 'first' ? 'First Year' : yearType === 'second' ? 'Second Year' : 'Third/Fourth Year'
+
+    const recommendationLogic = [
+      hasMat157 && isSpecialist && isGradSchool ? 'PUSH HARD: MAT257 MAT240 MAT267 STA257 MAT315 MAT327 this student can handle it' : '',
+      hasMat157 && !isGradSchool ? 'MAT257 MAT240 STA257 cross into CS or Stats' : '',
+      hasMat137 && !hasMat237 && isMath ? 'MAT237 MAT246 MAT240 are immediate next steps' : '',
+      isCS && !isHighCapacity ? 'CSC263 CSC209 CSC369 CSC343 based on prereqs' : '',
+      isCS && isHighCapacity ? 'CSC263 CSC369 CSC373 CSC311 consider MAT337 for theory depth' : '',
+      isStats && hasMat137 ? 'STA237 or STA257 then MAT237 then STA302 STA347' : '',
+      isLifeSci ? 'Program requirements first then quantitative electives relevant to field' : '',
+      isPsych ? 'Program requirements PSY stats courses maybe STA237 if quantitative' : '',
+    ].filter(Boolean).join('; ')
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -50,55 +61,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are a brilliant UofT upperclassman giving direct, opinionated course advice. Strong students get hard courses. Weak students get manageable ones. Be specific and ambitious.
-
-COURSE NAME ACCURACY (CRITICAL - never get these wrong):
-- MAT237Y1 = Multivariable Calculus
-- MAT246H1 = Abstract Mathematics
-- MAT240H1 = Algebra I
-- MAT247H1 = Algebra II
-- MAT257Y1 = Analysis II (manifolds, differential forms, Stokes theorem)
-- MAT267H1 = Advanced ODEs
-- MAT301H1 = Groups and Symmetries
-- MAT315H1 = Introduction to Number Theory
-- MAT327H1 = Introduction to Topology
-- MAT334H1 = Complex Variables
-- MAT337H1 = Introduction to Real Analysis
-- MAT344H1 = Introduction to Combinatorics
-- MAT347Y1 = Groups, Rings and Fields
-- MAT354H1 = Complex Analysis I
-- MAT357H1 = Foundations of Real Analysis
-- MAT363H1 = Introduction to Differential Geometry
-- STA257H1 = Probability and Statistics I
-- STA261H1 = Probability and Statistics II
-- STA347H1 = Probability
-- STA302H1 = Methods of Data Analysis I
-- CSC236H1 = Introduction to Theory of Computation
-- CSC258H1 = Computer Organization
-- CSC263H1 = Data Structures and Analysis
-- CSC311H1 = Introduction to Machine Learning
-- CSC373H1 = Algorithm Design
-- CSC369H1 = Operating Systems
-
-PREREQUISITES:
-- MAT257Y1 → MAT157Y1
-- MAT267H1 → MAT157Y1 + MAT240H1
-- MAT240H1 → MAT137Y1
-- MAT247H1 → MAT240H1
-- MAT237Y1 → MAT137Y1
-- MAT246H1 → MAT137Y1
-- MAT327H1 → MAT257Y1
-- MAT347Y1 → MAT247H1
-- MAT337H1 → MAT237Y1 + MAT246H1
-- MAT354H1 → MAT257Y1
-- MAT357H1 → MAT257Y1
-- STA257H1 → MAT137Y1
-- STA261H1 → STA257H1
-- STA347H1 → MAT237Y1 + STA238H1
-- CSC263H1 → CSC207H1 + CSC236H1
-- CSC311H1 → CSC207H1 + MAT237Y1 + STA238H1
-- CSC373H1 → CSC263H1
-- CSC369H1 → CSC209H1 + CSC263H1`,
+            content: 'You are a brilliant UofT upperclassman giving direct opinionated course advice. Strong students get hard courses. Weak students get manageable ones. Be specific and ambitious. CRITICAL course names: MAT237Y1=Multivariable Calculus, MAT246H1=Abstract Mathematics, MAT240H1=Algebra I, MAT247H1=Algebra II, MAT257Y1=Analysis II, MAT267H1=Advanced ODEs, MAT301H1=Groups and Symmetries, MAT315H1=Number Theory, MAT327H1=Topology, MAT334H1=Complex Variables, MAT337H1=Real Analysis, MAT347Y1=Groups Rings and Fields, MAT354H1=Complex Analysis I, MAT357H1=Foundations of Real Analysis, STA257H1=Probability and Statistics I, STA261H1=Probability and Statistics II, STA347H1=Probability, CSC263H1=Data Structures and Analysis, CSC311H1=Machine Learning, CSC373H1=Algorithm Design, CSC369H1=Operating Systems. PREREQUISITES: MAT257Y1 needs MAT157Y1. MAT267H1 needs MAT157Y1 and MAT240H1. MAT240H1 needs MAT137Y1. MAT247H1 needs MAT240H1. MAT237Y1 needs MAT137Y1. MAT327H1 needs MAT257Y1. MAT347Y1 needs MAT247H1. MAT337H1 needs MAT237Y1 and MAT246H1. STA257H1 needs MAT137Y1. STA347H1 needs MAT237Y1 and STA238H1. CSC263H1 needs CSC207H1 and CSC236H1. CSC311H1 needs CSC207H1 and MAT237Y1 and STA238H1.',
           },
           {
             role: 'user',
@@ -117,15 +80,64 @@ PROFILE:
 
 DERIVED:
 - Capability: ${isHighCapacity ? 'HIGH' : 'MODERATE'}
-- Math track: ${hasMat157 ? 'MAT157 (hard track)' : hasMat137 ? 'MAT137 (standard)' : 'No calc yet'}
+- Math track: ${hasMat157 ? 'MAT157 hard track' : hasMat137 ? 'MAT137 standard' : 'No calc yet'}
 - Has MAT237: ${hasMat237}, Has MAT240: ${hasMat240}
 - Grad school: ${isGradSchool}, Industry: ${isIndustry}
 - Math: ${isMath}, CS: ${isCS}, Stats: ${isStats}, LifeSci: ${isLifeSci}, Psych: ${isPsych}
 
-RECOMMENDATION LOGIC:
-${hasMat157 && isSpecialist && isGradSchool ? '→ PUSH HARD: MAT257, MAT240, MAT267, STA257, MAT315, MAT327 — this student can handle it' : ''}
-${hasMat157 && !isGradSchool ? '→ MAT257, MAT240, STA257, cross into CS/Stats' : ''}
-${hasMat137 && !hasMat237 && isMath ? '→ MAT237, MAT246, MAT240 are immediate next steps' : ''}
-${isCS && !isHighCapacity ? '→ CSC263, CSC209, CSC369, CSC343 based on prereqs' : ''}
-${isCS && isHighCapacity ? '→ CSC263, CSC369, CSC373, CSC311, consider MAT337 for theory depth' : ''}
-${isStats && hasMat137 ? '→ STA237/STA257, MAT237,
+RECOMMENDATION LOGIC: ${recommendationLogic}
+
+Recommend 6-10 courses not already completed. Cross-disciplinary picks valuable. Include 1-2 outside main field if it serves their goals.
+
+Return ONLY this JSON:
+{
+  "message": "2-3 sentences to ${profile.name} acknowledging their background with one direct piece of advice",
+  "courseRecommendations": [
+    {
+      "code": "MAT257Y1",
+      "name": "Analysis II",
+      "priority": "essential",
+      "reason": "You have MAT157 this is your immediate next step. Rigorous multivariable analysis covering differential forms analysis on manifolds Stokes theorem and multilinear algebra. Non-negotiable for grad school in math.",
+      "coreTopics": ["Differential forms", "Analysis on manifolds", "Stokes theorem", "Multilinear algebra", "Inverse and implicit function theorems"],
+      "prereqsMet": true,
+      "difficulty": "hard",
+      "workload": 15,
+      "crossDiscipline": false
+    }
+  ],
+  "degreeProgress": {
+    "completedCredits": ${completed.length * 0.5},
+    "requiredCredits": 20,
+    "remainingRequired": ["MAT257Y1", "MAT347Y1"],
+    "nextMilestone": "specific milestone for this student"
+  },
+  "advisorNote": "Direct honest paragraph of advice for this specific student"
+}`,
+          },
+        ],
+      }),
+    })
+
+    const data = await response.json()
+    if (data.error) return NextResponse.json({ error: data.error.message || 'OpenRouter error' }, { status: 500 })
+
+    const raw = data.choices?.[0]?.message?.content?.trim() || ''
+    try {
+      const parsed = JSON.parse(raw)
+      const filtered = (parsed.courseRecommendations || []).filter(
+        (c: { code: string }) => !completedSet.has(c.code.toUpperCase().replace(/\s/g, ''))
+      )
+      return NextResponse.json({
+        message: parsed.message || '',
+        courseRecommendations: filtered,
+        degreeProgress: parsed.degreeProgress || null,
+        advisorNote: parsed.advisorNote || '',
+      })
+    } catch {
+      return NextResponse.json({ message: '', courseRecommendations: [], degreeProgress: null, advisorNote: '' })
+    }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
