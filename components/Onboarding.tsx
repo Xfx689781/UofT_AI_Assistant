@@ -19,6 +19,7 @@ export interface OnboardingData {
   examPreference: string
   officeHoursImportance: string
   communicationPreference: string
+  selfAssessment: string
 }
 
 const STORAGE_KEY = 'uoft-ai-onboarding'
@@ -147,6 +148,7 @@ export const defaultOnboardingData: OnboardingData = {
   coursesCompleted: [], goalsSecondYear: '', learningStyle: '',
   studyHoursPerWeek: '', examPreference: '',
   officeHoursImportance: '', communicationPreference: '',
+  selfAssessment: '',
 }
 
 export function saveOnboardingData(data: OnboardingData) {
@@ -207,11 +209,10 @@ function TagInput({ tags, onTagsChange, placeholder = 'Type course code and pres
   )
 }
 
-function ChipSelect({ options, selected, onToggle, single }: {
+function ChipSelect({ options, selected, onToggle }: {
   options: string[]
   selected: string[]
   onToggle: (val: string) => void
-  single?: boolean
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -237,7 +238,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     if (data.yearType === 'first') {
       return [...base, 'admission', 'courses-first', 'interests', 'goals-first', 'learning-style', 'study-preferences'] as const
     }
-    return [...base, 'program-category', 'program-select', 'courses-completed', 'goals-upper', 'learning-style', 'study-preferences'] as const
+    return [...base, 'program-category', 'program-select', 'courses-completed', 'self-assessment', 'goals-upper', 'learning-style', 'study-preferences'] as const
   }, [data.yearType])
 
   const currentStepId = steps[stepIndex]
@@ -271,6 +272,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       case 'program-select':
         return data.programCategory === 'Other' ? data.programOther.trim().length > 0 : data.programOfStudy.length > 0
       case 'courses-completed': return true
+      case 'self-assessment': return data.selfAssessment.length > 0
       case 'goals-upper': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
       case 'study-preferences': return data.studyHoursPerWeek !== '' && data.examPreference !== '' && data.officeHoursImportance !== ''
@@ -307,10 +309,10 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           {currentStepId === 'year' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">Where are you in your journey?</h2>
-              <p className="text-sm text-[#8b9aad] mb-5">This shapes your entire course recommendation</p>
+              <p className="text-sm text-[#8b9aad] mb-5">This shapes your entire course plan</p>
               <div className="space-y-3">
                 {([
-                  { value: 'first', title: 'Starting First Year', sub: "About to begin at UofT, have not chosen a POSt yet" },
+                  { value: 'first', title: 'Starting First Year', sub: 'About to begin at UofT, have not chosen a POSt yet' },
                   { value: 'second', title: 'Entering Second Year', sub: 'Completed first year, entering a program of study' },
                   { value: 'third+', title: 'Third Year and Beyond', sub: 'In your program, planning upper-year and advanced courses' },
                 ] as { value: 'first' | 'second' | 'third+'; title: string; sub: string }[]).map(({ value, title, sub }) => (
@@ -344,10 +346,11 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               <p className="text-sm text-[#8b9aad] mb-4">Include Fall and Winter courses</p>
               <TagInput tags={data.coursesTaken} onTagsChange={(t) => update('coursesTaken', t)} placeholder="e.g. MAT137, CSC108" />
               <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
-                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add common first year courses:</p>
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {FIRST_YEAR_CHIPS.map(c => (
-                    <button key={c} type="button" onClick={() => { if (!data.coursesTaken.includes(c)) update('coursesTaken', [...data.coursesTaken, c]) }}
+                    <button key={c} type="button"
+                      onClick={() => { if (!data.coursesTaken.includes(c)) update('coursesTaken', [...data.coursesTaken, c]) }}
                       className={'px-2 py-1 rounded text-xs font-mono transition-all ' + (data.coursesTaken.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]')}
                     >{c}</button>
                   ))}
@@ -359,7 +362,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           {currentStepId === 'interests' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What subjects interest you?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Select all that apply — this shapes your cross-disciplinary recommendations</p>
+              <p className="text-sm text-[#8b9aad] mb-4">Select all that apply — shapes your cross-disciplinary recommendations</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {INTERESTS.map((opt) => {
                   const selected = data.interests.includes(opt)
@@ -444,11 +447,57 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                 <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {UPPER_YEAR_CHIPS.map(c => (
-                    <button key={c} type="button" onClick={() => { if (!data.coursesCompleted.includes(c)) update('coursesCompleted', [...data.coursesCompleted, c]) }}
+                    <button key={c} type="button"
+                      onClick={() => { if (!data.coursesCompleted.includes(c)) update('coursesCompleted', [...data.coursesCompleted, c]) }}
                       className={'px-2 py-1 rounded text-xs font-mono transition-all ' + (data.coursesCompleted.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]')}
                     >{c}</button>
                   ))}
                 </div>
+              </div>
+            </>
+          )}
+
+          {currentStepId === 'self-assessment' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-2">How would you describe your current academic foundation?</h2>
+              <p className="text-sm text-[#8b9aad] mb-6">
+                Be honest — this directly controls how ambitious your course plan will be.
+                A shaky foundation gets consolidation courses. A strong one gets you accelerated into upper-year material.
+              </p>
+              <div className="space-y-3">
+                {[
+                  {
+                    id: 'shaky',
+                    label: 'Shaky — I have gaps I want to fill',
+                    sub: 'I struggled in some courses, or feel my foundations could be stronger before moving on',
+                    color: 'text-yellow-400',
+                    icon: '🔧',
+                  },
+                  {
+                    id: 'solid',
+                    label: 'Solid — Ready for what my year normally recommends',
+                    sub: 'I did well in my courses and feel prepared to take the standard next step',
+                    color: 'text-blue-400',
+                    icon: '✅',
+                  },
+                  {
+                    id: 'strong',
+                    label: 'Strong — I want to be challenged beyond my year',
+                    sub: 'I excelled and want to push into advanced or upper-year courses ahead of schedule',
+                    color: 'text-green-400',
+                    icon: '🚀',
+                  },
+                ].map(({ id, label, sub, color, icon }) => (
+                  <button key={id} type="button" onClick={() => update('selfAssessment', id)}
+                    className={'w-full text-left p-4 rounded-xl border-2 transition-all ' + (data.selfAssessment === id ? 'border-[#0066CC] bg-[#002A5C]/40' : 'border-[#1e2a3a] hover:border-[#0066CC]/50')}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span>{icon}</span>
+                      <span className={'font-semibold text-sm ' + color}>{label}</span>
+                    </div>
+                    <p className="text-xs text-[#8b9aad] ml-6">{sub}</p>
+                  </button>
+                ))}
               </div>
             </>
           )}
@@ -488,27 +537,22 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               <h2 className="text-xl font-semibold text-white mb-1">Your study preferences</h2>
               <p className="text-sm text-[#8b9aad] mb-6">Used to personalize your professor match scores</p>
               <div className="space-y-6">
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">How many hours per week can you dedicate to studying?</p>
                   <ChipSelect
                     options={['Under 10h', '10-20h', '20-30h', '30h+']}
                     selected={data.studyHoursPerWeek ? [data.studyHoursPerWeek] : []}
                     onToggle={(v) => update('studyHoursPerWeek', v)}
-                    single
                   />
                 </div>
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">What exam format do you perform best in?</p>
                   <ChipSelect
                     options={['Proof / Theory', 'Computation / Numerical', 'Multiple Choice', 'Open Book', 'Take Home', 'No Preference']}
                     selected={data.examPreference ? [data.examPreference] : []}
                     onToggle={(v) => update('examPreference', v)}
-                    single
                   />
                 </div>
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">How important is professor accessibility to you?</p>
                   <div className="space-y-2">
@@ -526,19 +570,17 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <p className="text-sm text-white font-medium mb-3">
-                    How do you prefer to get help when stuck? <span className="text-[#6b7a8d] font-normal">(optional)</span>
+                    How do you prefer to get help when stuck?
+                    <span className="text-[#6b7a8d] font-normal ml-1">(optional)</span>
                   </p>
                   <ChipSelect
                     options={['Email professor', 'Office hours in person', 'Online forum / Piazza', 'Study group', 'Figure it out alone']}
                     selected={data.communicationPreference ? [data.communicationPreference] : []}
                     onToggle={(v) => update('communicationPreference', v)}
-                    single
                   />
                 </div>
-
               </div>
             </>
           )}
