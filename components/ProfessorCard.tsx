@@ -292,14 +292,14 @@ export function ProfessorSearch({ studentProfile }: { studentProfile: Onboarding
     <div className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
       <h2 className="text-lg font-semibold text-white mb-1">👨‍🏫 Professor Lens</h2>
       <p className="text-sm text-[#8b9aad] mb-4">
-        AI analysis using RMP, Reddit r/UofT, and your learning profile (2023–2025 data)
+        Enter a course code — our AI finds the professor who fits you best based on your learning profile, goals, and study style.
       </p>
 
       <div className="flex gap-2 mb-4">
         <input type="text" value={courseCode}
           onChange={e => setCourseCode(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && search()}
-          placeholder="e.g. MAT237Y1, STA238H1, CSC311H1"
+          placeholder="e.g. MAT237, STA238, CSC311"
           className="flex-1 px-4 py-2.5 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC] uppercase"
         />
         <button type="button" onClick={search} disabled={loading || !courseCode.trim()}
@@ -311,7 +311,7 @@ export function ProfessorSearch({ studentProfile }: { studentProfile: Onboarding
       {loading && (
         <div className="space-y-3">
           <p className="text-[#8b9aad] text-sm animate-pulse">
-            🔍 Searching RMP, Reddit r/UofT (2023–2025)...
+            Finding the best professor match for you...
           </p>
           {[1, 2].map(i => <div key={i} className="h-20 bg-[#0a0e14] rounded-xl animate-pulse" />)}
         </div>
