@@ -40,7 +40,7 @@ export default function LandingPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#002A5C] text-[#e8ecf1] text-xs mb-4 border border-[#0066CC]/50">
               <span className="w-1.5 h-1.5 rounded-full bg-[#00e0ff]" />
-              Powered by AI · Built for UofT
+              Powered by AI · Built for UofT students
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
               UTbot
