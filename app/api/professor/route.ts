@@ -175,7 +175,7 @@ export async function POST(req: Request) {
       '  "courseCode": "' + courseCode + '",',
       '  "courseName": "exact course name",',
       '  "dataConfidence": "high/medium/low",',
-      '  "yearsFound": ["2024", "2023"],',
+      '  "yearsFound": ["2026", "2025", "2024", "2023"],',
       '  "studentLearningAnalysis": "2-3 sentences about what teaching style this student needs based on their archetype and own words",',
       '  "professor": {',
       '    "name": "exact name from search data only",',
