@@ -14,7 +14,7 @@ export interface OnboardingData {
   programOther: string
   coursesCompleted: string[]
   goalsSecondYear: string
-  futureDirection: string
+  futureDirection: string[]
   learningStyle: string
   studyHoursPerWeek: string
   examPreference: string
@@ -123,7 +123,7 @@ const INTERESTS = [
 ]
 
 const GOALS_FIRST_YEAR = [
-  'Get into Math/Stats/CS POSt',
+  'Get into Math/Stats/DS/CS POSt',
   'Explore before deciding',
   'Graduate school eventually',
   'Industry/tech job',
@@ -135,26 +135,6 @@ const GOALS_UPPER_YEAR = [
   'Double major/minor exploration',
   'Graduate as efficiently as possible',
   'Build a strong theoretical foundation',
-]
-
-const FUTURE_DIRECTIONS = [
-  { id: 'ml-ai', label: 'Machine Learning / AI', sub: 'CSC311, CSC413, CSC412, STA347', icon: '🤖' },
-  { id: 'systems', label: 'Systems / Low-Level', sub: 'CSC369, CSC458, CSC469, CSC488', icon: '⚙️' },
-  { id: 'theory-cs', label: 'Theory of CS / Algorithms', sub: 'CSC373, CSC463, CSC473, CSC448', icon: '🧮' },
-  { id: 'vision-graphics', label: 'Computer Vision / Graphics', sub: 'CSC420, CSC418', icon: '👁️' },
-  { id: 'nlp', label: 'Natural Language Processing', sub: 'CSC401, CSC485', icon: '💬' },
-  { id: 'pure-math', label: 'Pure Mathematics', sub: 'MAT347, MAT327, MAT354, MAT357', icon: '∞' },
-  { id: 'analysis', label: 'Analysis / PDE', sub: 'MAT337, MAT354, MAT357, MAT351', icon: '∫' },
-  { id: 'algebra', label: 'Algebra / Number Theory', sub: 'MAT347, MAT315, MAT301', icon: '🔢' },
-  { id: 'stats-data', label: 'Statistics / Data Science', sub: 'STA302, STA347, STA365', icon: '📊' },
-  { id: 'quant-finance', label: 'Quantitative Finance', sub: 'STA347, ECO358, MAT337', icon: '📈' },
-  { id: 'bio-research', label: 'Biology / Research', sub: 'Upper-year BIO courses', icon: '🧬' },
-  { id: 'neuro', label: 'Neuroscience / Cog Sci', sub: 'PSY, NBC, COG upper-year', icon: '🧠' },
-  { id: 'physics-research', label: 'Physics Research', sub: 'PHY354, PHY356, PHY357', icon: '🔭' },
-  { id: 'grad-math', label: 'Math Graduate School', sub: 'MAT357, MAT347, MAT327', icon: '🎓' },
-  { id: 'grad-cs', label: 'CS Graduate School', sub: 'Research, CSC494, seminars', icon: '🎓' },
-  { id: 'industry-swe', label: 'Software Engineering / Industry', sub: 'CSC207, CSC209, CSC343', icon: '💼' },
-  { id: 'other', label: 'Other / Undecided', sub: 'Still exploring', icon: '🔀' },
 ]
 
 const LEARNING_STYLES = [
@@ -319,7 +299,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       case 'courses-completed-second': return true
       case 'courses-completed-third': return true
       case 'self-assessment': return data.selfAssessment.length > 0
-      case 'future-direction': return data.futureDirection.length > 0
+      case 'future-direction': return data.futureDirection.trim().length > 10
       case 'goals-upper': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
       case 'short-answer': return data.shortAnswer.trim().length > 20
@@ -333,7 +313,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     <div className="min-h-screen bg-[#0a0e14] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-1">UofT AI Assistant</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">UTbot</h1>
           <p className="text-[#8b9aad] text-xs">Step {stepIndex + 1} of {totalSteps}</p>
           <div className="mt-2 h-1.5 bg-[#121922] rounded-full overflow-hidden">
             <div className="h-full bg-[#0066CC] rounded-full transition-all duration-500" style={{ width: progress + '%' }} />
@@ -530,25 +510,32 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
 
           {currentStepId === 'future-direction' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-2">What direction are you heading?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Shapes which upper-year courses we prioritize</p>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                {FUTURE_DIRECTIONS.map(({ id, label, sub, icon }) => (
-                  <button key={id} type="button" onClick={() => update('futureDirection', id)}
-                    className={'w-full text-left p-3 rounded-xl border-2 transition-all ' + (data.futureDirection === id ? 'border-[#0066CC] bg-[#002A5C]/40' : 'border-[#1e2a3a] hover:border-[#0066CC]/50')}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{icon}</span>
-                      <div>
-                        <p className="text-white text-sm font-medium">{label}</p>
-                        <p className="text-xs text-[#6b7a8d]">{sub}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+              <h2 className="text-xl font-semibold text-white mb-2">Where are you heading?</h2>
+              <p className="text-sm text-[#8b9aad] mb-3">
+                What do you want to do with your degree? Be specific — this shapes which upper-year courses we prioritize.
+              </p>
+              <div className="bg-[#0a0e14] border border-[#1e2a3a] rounded-lg p-3 mb-4">
+                <p className="text-xs text-[#6b7a8d] mb-1.5">Examples:</p>
+                <div className="space-y-1.5 text-xs text-[#8b9aad]">
+                  <p className="pl-2 border-l border-[#243040]">"ML research — want to do a PhD in machine learning, need CSC311 and beyond"</p>
+                  <p className="pl-2 border-l border-[#243040]">"Pure math grad school — topology and algebra are my main interests"</p>
+                  <p className="pl-2 border-l border-[#243040]">"Industry SWE job after graduation, want practical CS courses"</p>
+                  <p className="pl-2 border-l border-[#243040]">"Stats + data science, maybe quant finance eventually"</p>
+                  <p className="pl-2 border-l border-[#243040]">"Not sure yet — want to explore both theory CS and applied math"</p>
+                </div>
               </div>
+              <textarea
+                value={data.futureDirection}
+                onChange={(e) => update('futureDirection', e.target.value)}
+                placeholder="Describe where you want to go..."
+                rows={4}
+                className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC] resize-none text-sm leading-relaxed"
+                />
+              <p className={'text-xs mt-2 ' + (data.futureDirection.length < 10 ? 'text-[#6b7a8d]' : 'text-green-400')}>
+                {data.futureDirection.length < 10 ? 'Write at least a sentence' : 'Good — the AI will use this directly'}
+              </p>
             </>
-          )}
+         )}
 
           {currentStepId === 'goals-upper' && (
             <>
