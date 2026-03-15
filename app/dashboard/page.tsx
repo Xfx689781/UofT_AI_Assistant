@@ -7,16 +7,19 @@ import { getOnboardingData, type OnboardingData } from '@/components/Onboarding'
 import { ProfessorSearch } from '@/components/ProfessorCard'
 import Chat from '@/components/Chat'
 
-interface CourseRecommendation {
+interface Course {
   code: string
   name: string
-  priority: 'essential' | 'recommended' | 'elective'
   reason: string
-  coreTopics: string[]
-  prereqsMet: boolean
-  difficulty: 'easy' | 'medium' | 'hard'
+  type: string
   workload: number
-  crossDiscipline: boolean
+  coreTopics: string[]
+  whyNow: string
+}
+
+interface SemesterPlan {
+  semester: string
+  courses: Course[]
 }
 
 interface DegreeProgress {
@@ -37,30 +40,24 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
   const [profile, setProfile] = useState<OnboardingData | null>(null)
   const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null)
-  const [courseRecommendations, setCourseRecommendations] = useState<CourseRecommendation[]>([])
+  const [courseSchedule, setCourseSchedule] = useState<SemesterPlan[]>([])
   const [degreeProgress, setDegreeProgress] = useState<DegreeProgress | null>(null)
   const [advisorNote, setAdvisorNote] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [expandedSemesters, setExpandedSemesters] = useState<Set<number>>(new Set([0, 1]))
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set())
 
-  // 1. 挂载阶段：获取本地存储的用户画像
   useEffect(() => {
     setMounted(true)
     const data = getOnboardingData()
-    
-    // 如果没有画像数据，强制跳回首页进行 onboarding
-    if (!data || !data.name || !data.learningStyle) {
-      router.replace('/')
-      return
-    }
+    if (!data?.name) { router.replace('/'); return }
+    if (!data.learningStyle) { router.replace('/'); return }
     setProfile(data)
   }, [router])
 
-  // 2. 数据请求阶段：获取欢迎词和个性化建议
   useEffect(() => {
     if (!profile?.name) return
-    
     setLoading(true)
     fetch('/api/welcome', {
       method: 'POST',
@@ -70,17 +67,26 @@ export default function DashboardPage() {
       .then(res => res.json())
       .then(json => {
         if (json.message) setWelcomeMessage(json.message)
-        if (json.courseRecommendations) setCourseRecommendations(json.courseRecommendations)
+        if (json.courseSchedule) setCourseSchedule(json.courseSchedule)
         if (json.degreeProgress) setDegreeProgress(json.degreeProgress)
         if (json.advisorNote) setAdvisorNote(json.advisorNote)
       })
-      .catch(err => console.error("Dashboard fetch error:", err))
+      .catch(() => setWelcomeMessage(null))
       .finally(() => setLoading(false))
-  }, [profile])
+  }, [profile?.name])
 
   function handleLogout() {
     localStorage.clear()
     router.replace('/')
+  }
+
+  function toggleSemester(i: number) {
+    setExpandedSemesters(prev => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
   }
 
   function toggleCourse(key: string) {
@@ -92,8 +98,13 @@ export default function DashboardPage() {
     })
   }
 
-  // 防止 Hydration 错误
-  if (!mounted) return null
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#0a0e14] flex items-center justify-center">
+        <div className="animate-pulse text-[#8b9aad]">Loading...</div>
+      </div>
+    )
+  }
 
   const displayProgram = profile ? getDisplayProgram(profile) : ''
   const progressPct = degreeProgress
@@ -102,24 +113,18 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0e14]">
-      {/* 顶部导航栏 */}
       <header className="border-b border-[#1e2a3a] bg-[#121922]/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link href="/dashboard" className="text-lg font-bold text-white tracking-tight">
-            UofT <span className="text-[#0066CC]">AI</span> Assistant
-          </Link>
-          
+          <Link href="/dashboard" className="text-lg font-bold text-white">UofT AI Assistant</Link>
           <div className="relative">
-            <button 
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e2a3a] hover:bg-[#243040] transition-all text-sm text-white"
-            >
+            <button onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e2a3a] hover:bg-[#243040] transition-all text-sm text-white">
               <div className="w-7 h-7 rounded-full bg-[#0066CC] flex items-center justify-center text-white font-bold text-xs">
                 {profile?.name?.[0]?.toUpperCase() ?? 'U'}
               </div>
-              <span className="hidden sm:inline">{profile?.name ?? 'Student'}</span>
+              <span>{profile?.name ?? 'Student'}</span>
+              <span className="text-[#8b9aad]">v</span>
             </button>
-            
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
@@ -128,10 +133,8 @@ export default function DashboardPage() {
                     <p className="text-white font-semibold">{profile?.name}</p>
                     <p className="text-[#8b9aad] text-xs mt-0.5">{displayProgram}</p>
                   </div>
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-3 text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium"
-                  >
+                  <button onClick={handleLogout}
+                    className="w-full text-left px-4 py-3 text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium">
                     Log Out
                   </button>
                 </div>
@@ -143,28 +146,35 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* 左侧主内容区域 */}
           <div className="lg:col-span-2 space-y-6">
-            
-            {/* 欢迎卡片 */}
-            <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6 shadow-sm">
+
+            {/* Welcome */}
+            <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
               <h1 className="text-2xl font-bold text-white mb-2">
-                {'Welcome back, ' + (profile?.name ?? 'Student') + '!'}
+                {'Welcome, ' + (profile?.name ?? 'Student') + '!'}
               </h1>
-              {loading ? (
-                <div className="space-y-2">
-                  <div className="h-4 bg-[#1e2a3a] rounded w-3/4 animate-pulse" />
-                  <div className="h-4 bg-[#1e2a3a] rounded w-1/2 animate-pulse" />
-                </div>
-              ) : (
-                <p className="text-[#c8d4e0] leading-relaxed">
-                  {welcomeMessage || "Ready to plan your next semester at UofT?"}
+              {loading && (
+                <p className="text-[#8b9aad] animate-pulse">
+                  Building your personalized course plan...
                 </p>
+              )}
+              {!loading && welcomeMessage && (
+                <p className="text-[#c8d4e0] leading-relaxed">{welcomeMessage}</p>
+              )}
+              {!loading && !welcomeMessage && (
+                <p className="text-[#8b9aad]">Here is your dashboard.</p>
               )}
             </section>
 
-            {/* 学位进度条 */}
+            {/* Advisor Note */}
+            {advisorNote && !loading && (
+              <section className="bg-[#002A5C]/20 border border-[#0066CC]/30 rounded-xl p-6">
+                <p className="text-xs text-[#0066CC] font-semibold mb-2">Advisor Note</p>
+                <p className="text-[#c8d4e0] text-sm leading-relaxed">{advisorNote}</p>
+              </section>
+            )}
+
+            {/* Degree Progress */}
             {degreeProgress && (
               <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Degree Progress</h2>
@@ -175,66 +185,150 @@ export default function DashboardPage() {
                       style={{ width: progressPct + '%' }}
                     />
                   </div>
-                  <span className="text-white font-bold text-sm">
+                  <span className="text-white font-bold text-sm whitespace-nowrap">
                     {progressPct}%
                   </span>
                 </div>
-                <p className="text-[#8b9aad] text-sm mb-4">{degreeProgress.nextMilestone}</p>
-                <div className="flex flex-wrap gap-2">
-                  {degreeProgress.remainingRequired.map(c => (
-                    <span key={c} className="px-2 py-1 rounded bg-[#002A5C]/30 border border-[#0066CC]/20 text-[#c8d4e0] text-xs font-mono">
-                      {c}
-                    </span>
-                  ))}
-                </div>
+                <p className="text-[#8b9aad] text-sm mb-3">{degreeProgress.nextMilestone}</p>
+                {degreeProgress.remainingRequired.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {degreeProgress.remainingRequired.slice(0, 10).map(c => (
+                      <span
+                        key={c}
+                        onClick={() => window.open('https://artsci.calendar.utoronto.ca/course/' + c.toLowerCase().replace(/\s/g, ''), '_blank')}
+                        className="px-2 py-1 rounded-md bg-[#002A5C]/50 border border-[#0066CC]/30 text-[#c8d4e0] text-xs font-mono cursor-pointer hover:border-[#0066CC] hover:text-white transition-all"
+                      >
+                        {c}
+                      </span>
+                    ))}
+                    {degreeProgress.remainingRequired.length > 10 && (
+                      <span className="text-[#8b9aad] text-xs px-2 py-1">
+                        +{degreeProgress.remainingRequired.length - 10} more
+                      </span>
+                    )}
+                  </div>
+                )}
               </section>
             )}
 
-            {/* 课程建议列表 */}
-            <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-white">Recommended Courses</h2>
-                <p className="text-sm text-[#8b9aad]">Tailored to your {profile?.learningStyle} learning style</p>
-              </div>
+            {/* Course Schedule */}
+            {(courseSchedule.length > 0 || loading) && (
+              <section className="bg-[#121922] border border-[#1e2a3a] rounded-xl p-6">
+                <h2 className="text-lg font-semibold text-white mb-1">Your Course Plan</h2>
+                <p className="text-xs text-[#8b9aad] mb-4">
+                  Click a course to see what you will actually learn and why it is in your plan
+                </p>
 
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => <div key={i} className="h-20 bg-[#1e2a3a] rounded-xl animate-pulse" />)}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {courseRecommendations.map((course, idx) => (
-                    <div key={idx} className="border border-[#1e2a3a] rounded-xl p-4 hover:border-[#0066CC]/50 transition-colors bg-[#0a0e14]/30">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <span className="text-[#0066CC] font-mono font-bold">{course.code}</span>
-                          <h3 className="text-white font-medium">{course.name}</h3>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          course.difficulty === 'hard' ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'
-                        }`}>
-                          {course.difficulty.toUpperCase()}
-                        </span>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-12 bg-[#0a0e14] rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {courseSchedule.map((sem, si) => (
+                      <div key={si} className="border border-[#1e2a3a] rounded-xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleSemester(si)}
+                          className="w-full flex items-center justify-between px-4 py-3 bg-[#0a0e14] hover:bg-[#0f1520] transition-all"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-full bg-[#0066CC] flex items-center justify-center text-white text-xs font-bold">
+                              {si + 1}
+                            </span>
+                            <span className="text-white font-medium">{sem.semester}</span>
+                            <span className="text-[#8b9aad] text-xs">{sem.courses.length} courses</span>
+                            <span className="text-xs text-[#6b7a8d]">
+                              ~{sem.courses.reduce((s, c) => s + (c.workload || 0), 0)}h/wk total
+                            </span>
+                          </div>
+                          <span className="text-[#8b9aad] text-sm">
+                            {expandedSemesters.has(si) ? 'v' : '>'}
+                          </span>
+                        </button>
+
+                        {expandedSemesters.has(si) && (
+                          <div className="divide-y divide-[#1e2a3a]">
+                            {sem.courses.map((course, ci) => {
+                              const key = si + '-' + ci
+                              const expanded = expandedCourses.has(key)
+                              return (
+                                <div key={ci}>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleCourse(key)}
+                                    className="w-full px-4 py-3 flex items-start gap-3 hover:bg-[#0f1520] transition-all text-left"
+                                  >
+                                    <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                                      <span
+                                        className="px-2 py-0.5 rounded bg-[#002A5C] text-[#0099ff] text-xs font-mono font-bold hover:bg-[#003580] cursor-pointer transition-all"
+                                        onClick={e => {
+                                          e.stopPropagation()
+                                          window.open('https://artsci.calendar.utoronto.ca/course/' + course.code.toLowerCase().replace(/\s/g, ''), '_blank')
+                                        }}
+                                      >
+                                        {course.code}
+                                      </span>
+                                      {course.type === 'required' && (
+                                        <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-xs">req</span>
+                                      )}
+                                      <span className="text-xs text-[#6b7a8d]">{course.workload}h</span>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-white text-sm font-medium">{course.name}</p>
+                                      <p className="text-[#8b9aad] text-xs mt-0.5 line-clamp-1">{course.reason}</p>
+                                    </div>
+                                    <span className="text-[#8b9aad] text-xs shrink-0">{expanded ? 'v' : '>'}</span>
+                                  </button>
+
+                                  {expanded && (
+                                    <div className="px-4 pb-4 bg-[#0a0e14]/40 space-y-3">
+                                      <p className="text-[#c8d4e0] text-sm leading-relaxed pt-2">{course.reason}</p>
+                                      {course.coreTopics && course.coreTopics.length > 0 && (
+                                        <div>
+                                          <p className="text-xs text-[#0066CC] font-semibold mb-2">Core Topics</p>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {course.coreTopics.map((topic, ti) => (
+                                              <span key={ti} className="px-2 py-1 rounded-lg bg-[#002A5C]/40 border border-[#0066CC]/20 text-[#c8d4e0] text-xs">
+                                                {topic}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {course.whyNow && (
+                                        <div className="bg-[#121922] border border-[#1e2a3a] rounded-lg p-3">
+                                          <p className="text-xs text-yellow-400 font-semibold mb-1">Why Now</p>
+                                          <p className="text-[#c8d4e0] text-xs leading-relaxed">{course.whyNow}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-[#8b9aad] text-sm leading-relaxed">{course.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
-            {/* 教授搜索组件 */}
+            {/* Professor Lens */}
             <ProfessorSearch studentProfile={profile} />
+
           </div>
 
-          {/* 右侧固定聊天区域 */}
+          {/* Chat */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 h-[calc(100vh-8rem)] min-h-[500px]">
-              {/* 关键修复：关联 profile */}
-              <Chat studentProfile={profile} />
+              <Chat />
             </div>
           </div>
-
         </div>
       </main>
     </div>
