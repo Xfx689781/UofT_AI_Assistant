@@ -195,7 +195,7 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-function TagInput({ tags, onTagsChange, placeholder = 'Select ALL COURSES that you have taken.' }: {
+function TagInput({ tags, onTagsChange, placeholder = 'Type your courses if they're not on the checkboxes' }: {
   tags: string[]
   onTagsChange: (tags: string[]) => void
   placeholder?: string
@@ -227,7 +227,7 @@ function TagInput({ tags, onTagsChange, placeholder = 'Select ALL COURSES that y
           className="flex-1 min-w-[140px] bg-transparent text-white placeholder-[#6b7a8d] focus:outline-none text-sm py-1"
         />
       </div>
-      <p className="text-xs text-[#6b7a8d]">Type your answer and press enter.</p>
+      <p className="text-xs text-[#6b7a8d]">Press Enter to add each course</p>
     </div>
   )
 }
@@ -469,7 +469,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           {currentStepId === 'courses-completed-second' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-1">What courses did you complete in first year?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Used to check prerequisites and build your plan</p>
+              <p className="text-sm text-[#8b9aad] mb-4">Select ALL that apply</p>
               <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
               <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
                 <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add:</p>
