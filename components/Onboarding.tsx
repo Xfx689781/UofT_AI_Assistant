@@ -14,6 +14,7 @@ export interface OnboardingData {
   programOther: string
   coursesCompleted: string[]
   goalsSecondYear: string
+  futureDirection: string
   learningStyle: string
   studyHoursPerWeek: string
   examPreference: string
@@ -134,6 +135,26 @@ const GOALS_UPPER_YEAR = [
   'Build a strong theoretical foundation',
 ]
 
+const FUTURE_DIRECTIONS = [
+  { id: 'ml-ai', label: 'Machine Learning / AI', sub: 'CSC311, CSC413, CSC412, STA347', icon: '🤖' },
+  { id: 'systems', label: 'Systems / Low-Level', sub: 'CSC369, CSC458, CSC469, CSC488', icon: '⚙️' },
+  { id: 'theory-cs', label: 'Theory of CS / Algorithms', sub: 'CSC373, CSC463, CSC473, CSC448', icon: '🧮' },
+  { id: 'vision-graphics', label: 'Computer Vision / Graphics', sub: 'CSC420, CSC418, CSC2503', icon: '👁️' },
+  { id: 'nlp', label: 'Natural Language Processing', sub: 'CSC401, CSC485, CSC2501', icon: '💬' },
+  { id: 'pure-math', label: 'Pure Mathematics', sub: 'MAT347, MAT327, MAT354, MAT357', icon: '∞' },
+  { id: 'analysis', label: 'Analysis / PDE', sub: 'MAT337, MAT354, MAT357, MAT351', icon: '∫' },
+  { id: 'algebra', label: 'Algebra / Number Theory', sub: 'MAT347, MAT315, MAT301, MAT409', icon: '🔢' },
+  { id: 'stats-data', label: 'Statistics / Data Science', sub: 'STA302, STA347, STA365, STA414', icon: '📊' },
+  { id: 'quant-finance', label: 'Quantitative Finance', sub: 'STA347, ECO358, MAT337, ACT451', icon: '📈' },
+  { id: 'bio-research', label: 'Biology / Research', sub: 'Upper-year BIO, BCH, JMB courses', icon: '🧬' },
+  { id: 'neuro', label: 'Neuroscience / Cog Sci', sub: 'PSY, NBC, COG upper-year courses', icon: '🧠' },
+  { id: 'physics-research', label: 'Physics Research', sub: 'PHY354, PHY356, PHY357, PHY358', icon: '🔭' },
+  { id: 'grad-math', label: 'Math Graduate School', sub: 'MAT357, MAT347, MAT327, research', icon: '🎓' },
+  { id: 'grad-cs', label: 'CS Graduate School', sub: 'Research, CSC494, senior seminars', icon: '🎓' },
+  { id: 'industry-swe', label: 'Software Engineering / Industry', sub: 'CSC207, CSC209, CSC343, internships', icon: '💼' },
+  { id: 'other', label: 'Other / Undecided', sub: 'I am still exploring my direction', icon: '🔀' },
+]
+
 const LEARNING_STYLES = [
   { id: 'lecture', label: 'Lecture-Based', subtitle: 'I learn best by listening to structured lectures', icon: '📖' },
   { id: 'practice', label: 'Practice-Heavy', subtitle: 'I need lots of problems and exercises', icon: '✏️' },
@@ -145,10 +166,9 @@ export const defaultOnboardingData: OnboardingData = {
   name: '', yearType: '', admissionCategory: '',
   coursesTaken: [], interests: [], goalsFirstYear: '',
   programCategory: '', programOfStudy: '', programOther: '',
-  coursesCompleted: [], goalsSecondYear: '', learningStyle: '',
-  studyHoursPerWeek: '', examPreference: '',
-  officeHoursImportance: '', communicationPreference: '',
-  selfAssessment: '',
+  coursesCompleted: [], goalsSecondYear: '', futureDirection: '',
+  learningStyle: '', studyHoursPerWeek: '', examPreference: '',
+  officeHoursImportance: '', communicationPreference: '', selfAssessment: '',
 }
 
 export function saveOnboardingData(data: OnboardingData) {
@@ -225,8 +245,25 @@ function ChipSelect({ options, selected, onToggle }: {
   )
 }
 
-const FIRST_YEAR_CHIPS = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'CSC108', 'CSC110Y1', 'CSC148', 'CSC165', 'STA130', 'PHY131', 'PHY132', 'CHM135', 'CHM136', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100']
-const UPPER_YEAR_CHIPS = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT237', 'MAT240', 'MAT244', 'MAT246', 'MAT247', 'MAT257', 'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258', 'CSC263', 'STA237', 'STA238', 'STA247', 'STA257', 'PHY131', 'PHY132', 'BIO120', 'BIO130', 'PSY100', 'ECO101', 'ECO102']
+const SECOND_YEAR_CHIPS = [
+  'MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT237', 'MAT240', 'MAT244', 'MAT246',
+  'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258',
+  'STA130', 'STA237', 'STA238', 'STA247', 'STA257',
+  'PHY131', 'PHY132', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100',
+]
+
+const THIRD_YEAR_CHIPS = [
+  'MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT235', 'MAT237', 'MAT240', 'MAT244',
+  'MAT246', 'MAT247', 'MAT257', 'MAT267', 'MAT301', 'MAT315', 'MAT327', 'MAT334', 'MAT337', 'MAT344',
+  'MAT347', 'MAT354', 'MAT357', 'MAT363',
+  'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258', 'CSC263', 'CSC311', 'CSC343',
+  'CSC369', 'CSC373', 'CSC384', 'CSC401', 'CSC412', 'CSC413', 'CSC420', 'CSC448', 'CSC458', 'CSC463',
+  'STA237', 'STA238', 'STA247', 'STA257', 'STA261', 'STA302', 'STA347',
+  'PHY131', 'PHY132', 'PHY151', 'PHY152', 'PHY254', 'PHY256', 'PHY350', 'PHY354',
+  'BIO120', 'BIO130', 'BIO230', 'BIO240', 'BIO270',
+  'ECO101', 'ECO102', 'ECO200', 'ECO202', 'ECO220', 'ECO325', 'ECO358',
+  'PSY100', 'PSY201', 'PSY220', 'PSY230', 'PSY240', 'PSY270',
+]
 
 export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [data, setData] = useState<OnboardingData>(defaultOnboardingData)
@@ -236,9 +273,12 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     const base = ['name', 'year'] as const
     if (!data.yearType) return [...base]
     if (data.yearType === 'first') {
-      return [...base, 'admission', 'courses-first', 'interests', 'goals-first', 'learning-style', 'study-preferences'] as const
+      return [...base, 'admission', 'interests', 'goals-first', 'learning-style', 'study-preferences'] as const
     }
-    return [...base, 'program-category', 'program-select', 'courses-completed', 'self-assessment', 'goals-upper', 'learning-style', 'study-preferences'] as const
+    if (data.yearType === 'second') {
+      return [...base, 'program-category', 'program-select', 'courses-completed-second', 'self-assessment', 'goals-upper', 'learning-style', 'study-preferences'] as const
+    }
+    return [...base, 'program-category', 'program-select', 'courses-completed-third', 'self-assessment', 'future-direction', 'goals-upper', 'learning-style', 'study-preferences'] as const
   }, [data.yearType])
 
   const currentStepId = steps[stepIndex]
@@ -265,14 +305,15 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       case 'name': return data.name.trim().length > 0
       case 'year': return data.yearType !== ''
       case 'admission': return data.admissionCategory.length > 0
-      case 'courses-first': return true
       case 'interests': return data.interests.length > 0
       case 'goals-first': return data.goalsFirstYear.length > 0
       case 'program-category': return data.programCategory.length > 0
       case 'program-select':
         return data.programCategory === 'Other' ? data.programOther.trim().length > 0 : data.programOfStudy.length > 0
-      case 'courses-completed': return true
+      case 'courses-completed-second': return true
+      case 'courses-completed-third': return true
       case 'self-assessment': return data.selfAssessment.length > 0
+      case 'future-direction': return data.futureDirection.length > 0
       case 'goals-upper': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
       case 'study-preferences': return data.studyHoursPerWeek !== '' && data.examPreference !== '' && data.officeHoursImportance !== ''
@@ -312,7 +353,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               <p className="text-sm text-[#8b9aad] mb-5">This shapes your entire course plan</p>
               <div className="space-y-3">
                 {([
-                  { value: 'first', title: 'Starting First Year', sub: 'About to begin at UofT, have not chosen a POSt yet' },
+                  { value: 'first', title: 'Starting First Year', sub: 'High school graduate, about to begin at UofT' },
                   { value: 'second', title: 'Entering Second Year', sub: 'Completed first year, entering a program of study' },
                   { value: 'third+', title: 'Third Year and Beyond', sub: 'In your program, planning upper-year and advanced courses' },
                 ] as { value: 'first' | 'second' | 'third+'; title: string; sub: string }[]).map(({ value, title, sub }) => (
@@ -340,29 +381,10 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             </>
           )}
 
-          {currentStepId === 'courses-first' && (
-            <>
-              <h2 className="text-xl font-semibold text-white mb-1">What courses have you taken this year?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Include Fall and Winter courses</p>
-              <TagInput tags={data.coursesTaken} onTagsChange={(t) => update('coursesTaken', t)} placeholder="e.g. MAT137, CSC108" />
-              <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
-                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {FIRST_YEAR_CHIPS.map(c => (
-                    <button key={c} type="button"
-                      onClick={() => { if (!data.coursesTaken.includes(c)) update('coursesTaken', [...data.coursesTaken, c]) }}
-                      className={'px-2 py-1 rounded text-xs font-mono transition-all ' + (data.coursesTaken.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]')}
-                    >{c}</button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
           {currentStepId === 'interests' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What subjects interest you?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Select all that apply — shapes your cross-disciplinary recommendations</p>
+              <p className="text-sm text-[#8b9aad] mb-4">Select all that apply</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {INTERESTS.map((opt) => {
                   const selected = data.interests.includes(opt)
@@ -436,17 +458,34 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             </>
           )}
 
-          {currentStepId === 'courses-completed' && (
+          {currentStepId === 'courses-completed-second' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-1">
-                {data.yearType === 'second' ? 'What courses did you complete in first year?' : 'What courses have you completed so far?'}
-              </h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Used to check prerequisites and avoid repeating courses</p>
+              <h2 className="text-xl font-semibold text-white mb-1">What courses did you complete in first year?</h2>
+              <p className="text-sm text-[#8b9aad] mb-4">Used to check prerequisites and build your second year plan</p>
               <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
               <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
-                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add:</p>
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add first year courses:</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {UPPER_YEAR_CHIPS.map(c => (
+                  {SECOND_YEAR_CHIPS.map(c => (
+                    <button key={c} type="button"
+                      onClick={() => { if (!data.coursesCompleted.includes(c)) update('coursesCompleted', [...data.coursesCompleted, c]) }}
+                      className={'px-2 py-1 rounded text-xs font-mono transition-all ' + (data.coursesCompleted.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]')}
+                    >{c}</button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStepId === 'courses-completed-third' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-1">What courses have you completed so far?</h2>
+              <p className="text-sm text-[#8b9aad] mb-4">Include everything from first and second year</p>
+              <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
+              <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add — scroll for more:</p>
+                <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto pr-1">
+                  {THIRD_YEAR_CHIPS.map(c => (
                     <button key={c} type="button"
                       onClick={() => { if (!data.coursesCompleted.includes(c)) update('coursesCompleted', [...data.coursesCompleted, c]) }}
                       className={'px-2 py-1 rounded text-xs font-mono transition-all ' + (data.coursesCompleted.includes(c) ? 'bg-[#0066CC] text-white' : 'bg-[#1e2a3a] text-[#8b9aad] hover:text-white hover:bg-[#243040]')}
@@ -461,29 +500,28 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             <>
               <h2 className="text-xl font-semibold text-white mb-2">How would you describe your current academic foundation?</h2>
               <p className="text-sm text-[#8b9aad] mb-6">
-                Be honest — this directly controls how ambitious your course plan will be.
-                A shaky foundation gets consolidation courses. A strong one gets you accelerated into upper-year material.
+                Be honest — this directly controls how ambitious your course plan will be
               </p>
               <div className="space-y-3">
                 {[
                   {
                     id: 'shaky',
                     label: 'Shaky — I have gaps I want to fill',
-                    sub: 'I struggled in some courses, or feel my foundations could be stronger before moving on',
+                    sub: 'I struggled in some courses or feel my foundations need strengthening before moving on',
                     color: 'text-yellow-400',
                     icon: '🔧',
                   },
                   {
                     id: 'solid',
-                    label: 'Solid — Ready for what my year normally recommends',
-                    sub: 'I did well in my courses and feel prepared to take the standard next step',
+                    label: 'Solid — Ready for standard next step',
+                    sub: 'I did well and feel prepared to follow the normal progression for my year',
                     color: 'text-blue-400',
                     icon: '✅',
                   },
                   {
                     id: 'strong',
-                    label: 'Strong — I want to be challenged beyond my year',
-                    sub: 'I excelled and want to push into advanced or upper-year courses ahead of schedule',
+                    label: 'Strong — Challenge me beyond my year',
+                    sub: 'I excelled and want to push into advanced or upper-year material ahead of schedule',
                     color: 'text-green-400',
                     icon: '🚀',
                   },
@@ -496,6 +534,28 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                       <span className={'font-semibold text-sm ' + color}>{label}</span>
                     </div>
                     <p className="text-xs text-[#8b9aad] ml-6">{sub}</p>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {currentStepId === 'future-direction' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-2">What direction are you heading?</h2>
+              <p className="text-sm text-[#8b9aad] mb-4">This shapes which upper-year courses we prioritize for you</p>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                {FUTURE_DIRECTIONS.map(({ id, label, sub, icon }) => (
+                  <button key={id} type="button" onClick={() => update('futureDirection', id)}
+                    className={'w-full text-left p-3 rounded-xl border-2 transition-all ' + (data.futureDirection === id ? 'border-[#0066CC] bg-[#002A5C]/40' : 'border-[#1e2a3a] hover:border-[#0066CC]/50')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{icon}</span>
+                      <div>
+                        <p className="text-white text-sm font-medium">{label}</p>
+                        <p className="text-xs text-[#6b7a8d]">{sub}</p>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
