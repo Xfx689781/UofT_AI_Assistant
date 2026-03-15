@@ -240,9 +240,7 @@ export default function DashboardPage() {
                             </span>
                             <span className="text-white font-medium">{sem.semester}</span>
                             <span className="text-[#8b9aad] text-xs">{sem.courses.length} courses</span>
-                            <span className="text-xs text-[#6b7a8d]">
-                              ~{sem.courses.reduce((s, c) => s + (c.workload || 0), 0)}h/wk total
-                            </span>
+                        
                           </div>
                           <span className="text-[#8b9aad] text-sm">
                             {expandedSemesters.has(si) ? 'v' : '>'}
@@ -274,7 +272,7 @@ export default function DashboardPage() {
                                       {course.type === 'required' && (
                                         <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-xs">req</span>
                                       )}
-                                      <span className="text-xs text-[#6b7a8d]">{course.workload}h</span>
+                                
                                     </div>
                                     <div className="flex-1">
                                       <p className="text-white text-sm font-medium">{course.name}</p>
