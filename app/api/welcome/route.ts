@@ -140,7 +140,7 @@ export async function POST(req: Request) {
       'STA447H1=Stochastic Processes (H1)',
       'STA410H1=Statistical Computation (H1)',
       'STA314H1=Statistical Methods of Machine Learning I (H1)',
-      'STA414H1=Statiscal Methods of Machine Learning II (H1)',
+      'STA414H1=Statistical Methods of Machine Learning II (H1)',
       'STA437H1=Methods for Multivariate Data (H1)',
       'STA465H1=Spatial Data Analysis (H1)',
       'STA475H1=Survival Analysis (H1)',
