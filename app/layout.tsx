@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-geist-sans' })
 
 export const metadata: Metadata = {
-  title: 'UofT AI Assistant',
-  description: 'Course selection and professor analysis for University of Toronto students',
+  title: 'UTbot',
+  description: 'Course selection, professor analysis and academic chatbot for University of Toronto (St. George) students',
 }
 
 export default function RootLayout({
