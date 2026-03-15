@@ -21,6 +21,8 @@ export interface OnboardingData {
   officeHoursImportance: string
   communicationPreference: string
   selfAssessment: string
+  shortAnswer: string
+  professorPreference: string
 }
 
 const STORAGE_KEY = 'uoft-ai-onboarding'
@@ -139,26 +141,26 @@ const FUTURE_DIRECTIONS = [
   { id: 'ml-ai', label: 'Machine Learning / AI', sub: 'CSC311, CSC413, CSC412, STA347', icon: '🤖' },
   { id: 'systems', label: 'Systems / Low-Level', sub: 'CSC369, CSC458, CSC469, CSC488', icon: '⚙️' },
   { id: 'theory-cs', label: 'Theory of CS / Algorithms', sub: 'CSC373, CSC463, CSC473, CSC448', icon: '🧮' },
-  { id: 'vision-graphics', label: 'Computer Vision / Graphics', sub: 'CSC420, CSC418, CSC2503', icon: '👁️' },
-  { id: 'nlp', label: 'Natural Language Processing', sub: 'CSC401, CSC485, CSC2501', icon: '💬' },
+  { id: 'vision-graphics', label: 'Computer Vision / Graphics', sub: 'CSC420, CSC418', icon: '👁️' },
+  { id: 'nlp', label: 'Natural Language Processing', sub: 'CSC401, CSC485', icon: '💬' },
   { id: 'pure-math', label: 'Pure Mathematics', sub: 'MAT347, MAT327, MAT354, MAT357', icon: '∞' },
   { id: 'analysis', label: 'Analysis / PDE', sub: 'MAT337, MAT354, MAT357, MAT351', icon: '∫' },
-  { id: 'algebra', label: 'Algebra / Number Theory', sub: 'MAT347, MAT315, MAT301, MAT409', icon: '🔢' },
-  { id: 'stats-data', label: 'Statistics / Data Science', sub: 'STA302, STA347, STA365, STA414', icon: '📊' },
-  { id: 'quant-finance', label: 'Quantitative Finance', sub: 'STA347, ECO358, MAT337, ACT451', icon: '📈' },
-  { id: 'bio-research', label: 'Biology / Research', sub: 'Upper-year BIO, BCH, JMB courses', icon: '🧬' },
-  { id: 'neuro', label: 'Neuroscience / Cog Sci', sub: 'PSY, NBC, COG upper-year courses', icon: '🧠' },
-  { id: 'physics-research', label: 'Physics Research', sub: 'PHY354, PHY356, PHY357, PHY358', icon: '🔭' },
-  { id: 'grad-math', label: 'Math Graduate School', sub: 'MAT357, MAT347, MAT327, research', icon: '🎓' },
-  { id: 'grad-cs', label: 'CS Graduate School', sub: 'Research, CSC494, senior seminars', icon: '🎓' },
-  { id: 'industry-swe', label: 'Software Engineering / Industry', sub: 'CSC207, CSC209, CSC343, internships', icon: '💼' },
-  { id: 'other', label: 'Other / Undecided', sub: 'I am still exploring my direction', icon: '🔀' },
+  { id: 'algebra', label: 'Algebra / Number Theory', sub: 'MAT347, MAT315, MAT301', icon: '🔢' },
+  { id: 'stats-data', label: 'Statistics / Data Science', sub: 'STA302, STA347, STA365', icon: '📊' },
+  { id: 'quant-finance', label: 'Quantitative Finance', sub: 'STA347, ECO358, MAT337', icon: '📈' },
+  { id: 'bio-research', label: 'Biology / Research', sub: 'Upper-year BIO courses', icon: '🧬' },
+  { id: 'neuro', label: 'Neuroscience / Cog Sci', sub: 'PSY, NBC, COG upper-year', icon: '🧠' },
+  { id: 'physics-research', label: 'Physics Research', sub: 'PHY354, PHY356, PHY357', icon: '🔭' },
+  { id: 'grad-math', label: 'Math Graduate School', sub: 'MAT357, MAT347, MAT327', icon: '🎓' },
+  { id: 'grad-cs', label: 'CS Graduate School', sub: 'Research, CSC494, seminars', icon: '🎓' },
+  { id: 'industry-swe', label: 'Software Engineering / Industry', sub: 'CSC207, CSC209, CSC343', icon: '💼' },
+  { id: 'other', label: 'Other / Undecided', sub: 'Still exploring', icon: '🔀' },
 ]
 
 const LEARNING_STYLES = [
   { id: 'lecture', label: 'Lecture-Based', subtitle: 'I learn best by listening to structured lectures', icon: '📖' },
   { id: 'practice', label: 'Practice-Heavy', subtitle: 'I need lots of problems and exercises', icon: '✏️' },
-  { id: 'self-study', label: 'Self-Study', subtitle: 'I prefer reading textbooks and exploring alone', icon: '🔍' },
+  { id: 'self-study', label: 'Self-Study', subtitle: 'I prefer reading textbooks and figuring things out alone', icon: '🔍' },
   { id: 'collaborative', label: 'Collaborative', subtitle: 'I learn best discussing with others', icon: '👥' },
 ]
 
@@ -168,7 +170,8 @@ export const defaultOnboardingData: OnboardingData = {
   programCategory: '', programOfStudy: '', programOther: '',
   coursesCompleted: [], goalsSecondYear: '', futureDirection: '',
   learningStyle: '', studyHoursPerWeek: '', examPreference: '',
-  officeHoursImportance: '', communicationPreference: '', selfAssessment: '',
+  officeHoursImportance: '', communicationPreference: '',
+  selfAssessment: '', shortAnswer: '', professorPreference: '',
 }
 
 export function saveOnboardingData(data: OnboardingData) {
@@ -260,7 +263,7 @@ const THIRD_YEAR_CHIPS = [
   'CSC369', 'CSC373', 'CSC384', 'CSC401', 'CSC412', 'CSC413', 'CSC420', 'CSC448', 'CSC458', 'CSC463',
   'STA237', 'STA238', 'STA247', 'STA257', 'STA261', 'STA302', 'STA347',
   'PHY131', 'PHY132', 'PHY151', 'PHY152', 'PHY254', 'PHY256', 'PHY350', 'PHY354',
-  'BIO120', 'BIO130', 'BIO230', 'BIO240', 'BIO270',
+  'BIO120', 'BIO130', 'BIO230', 'BIO240',
   'ECO101', 'ECO102', 'ECO200', 'ECO202', 'ECO220', 'ECO325', 'ECO358',
   'PSY100', 'PSY201', 'PSY220', 'PSY230', 'PSY240', 'PSY270',
 ]
@@ -273,12 +276,12 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
     const base = ['name', 'year'] as const
     if (!data.yearType) return [...base]
     if (data.yearType === 'first') {
-      return [...base, 'admission', 'interests', 'goals-first', 'learning-style', 'study-preferences'] as const
+      return [...base, 'admission', 'interests', 'goals-first', 'learning-style', 'short-answer', 'study-preferences', 'professor-preference'] as const
     }
     if (data.yearType === 'second') {
-      return [...base, 'program-category', 'program-select', 'courses-completed-second', 'self-assessment', 'goals-upper', 'learning-style', 'study-preferences'] as const
+      return [...base, 'program-category', 'program-select', 'courses-completed-second', 'self-assessment', 'goals-upper', 'learning-style', 'short-answer', 'study-preferences', 'professor-preference'] as const
     }
-    return [...base, 'program-category', 'program-select', 'courses-completed-third', 'self-assessment', 'future-direction', 'goals-upper', 'learning-style', 'study-preferences'] as const
+    return [...base, 'program-category', 'program-select', 'courses-completed-third', 'self-assessment', 'future-direction', 'goals-upper', 'learning-style', 'short-answer', 'study-preferences', 'professor-preference'] as const
   }, [data.yearType])
 
   const currentStepId = steps[stepIndex]
@@ -316,7 +319,9 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
       case 'future-direction': return data.futureDirection.length > 0
       case 'goals-upper': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
+      case 'short-answer': return data.shortAnswer.trim().length > 20
       case 'study-preferences': return data.studyHoursPerWeek !== '' && data.examPreference !== '' && data.officeHoursImportance !== ''
+      case 'professor-preference': return data.professorPreference.trim().length > 10
       default: return false
     }
   }, [currentStepId, data])
@@ -461,10 +466,10 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           {currentStepId === 'courses-completed-second' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-1">What courses did you complete in first year?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">Used to check prerequisites and build your second year plan</p>
+              <p className="text-sm text-[#8b9aad] mb-4">Used to check prerequisites and build your plan</p>
               <TagInput tags={data.coursesCompleted} onTagsChange={(t) => update('coursesCompleted', t)} />
               <div className="mt-4 p-3 bg-[#0a0e14] rounded-lg border border-[#1e2a3a]">
-                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add first year courses:</p>
+                <p className="text-xs text-[#8b9aad] font-semibold mb-2">Quick add:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {SECOND_YEAR_CHIPS.map(c => (
                     <button key={c} type="button"
@@ -499,32 +504,12 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           {currentStepId === 'self-assessment' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">How would you describe your current academic foundation?</h2>
-              <p className="text-sm text-[#8b9aad] mb-6">
-                Be honest — this directly controls how ambitious your course plan will be
-              </p>
+              <p className="text-sm text-[#8b9aad] mb-6">Be honest — this controls how ambitious your course plan will be</p>
               <div className="space-y-3">
                 {[
-                  {
-                    id: 'shaky',
-                    label: 'Shaky — I have gaps I want to fill',
-                    sub: 'I struggled in some courses or feel my foundations need strengthening before moving on',
-                    color: 'text-yellow-400',
-                    icon: '🔧',
-                  },
-                  {
-                    id: 'solid',
-                    label: 'Solid — Ready for standard next step',
-                    sub: 'I did well and feel prepared to follow the normal progression for my year',
-                    color: 'text-blue-400',
-                    icon: '✅',
-                  },
-                  {
-                    id: 'strong',
-                    label: 'Strong — Challenge me beyond my year',
-                    sub: 'I excelled and want to push into advanced or upper-year material ahead of schedule',
-                    color: 'text-green-400',
-                    icon: '🚀',
-                  },
+                  { id: 'shaky', label: 'Shaky — I have gaps I want to fill', sub: 'I struggled in some courses or feel my foundations need strengthening', color: 'text-yellow-400', icon: '🔧' },
+                  { id: 'solid', label: 'Solid — Ready for standard next step', sub: 'I did well and feel prepared to follow normal progression', color: 'text-blue-400', icon: '✅' },
+                  { id: 'strong', label: 'Strong — Challenge me beyond my year', sub: 'I excelled and want to push into advanced material ahead of schedule', color: 'text-green-400', icon: '🚀' },
                 ].map(({ id, label, sub, color, icon }) => (
                   <button key={id} type="button" onClick={() => update('selfAssessment', id)}
                     className={'w-full text-left p-4 rounded-xl border-2 transition-all ' + (data.selfAssessment === id ? 'border-[#0066CC] bg-[#002A5C]/40' : 'border-[#1e2a3a] hover:border-[#0066CC]/50')}
@@ -543,7 +528,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
           {currentStepId === 'future-direction' && (
             <>
               <h2 className="text-xl font-semibold text-white mb-2">What direction are you heading?</h2>
-              <p className="text-sm text-[#8b9aad] mb-4">This shapes which upper-year courses we prioritize for you</p>
+              <p className="text-sm text-[#8b9aad] mb-4">Shapes which upper-year courses we prioritize</p>
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                 {FUTURE_DIRECTIONS.map(({ id, label, sub, icon }) => (
                   <button key={id} type="button" onClick={() => update('futureDirection', id)}
@@ -589,6 +574,51 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                   </button>
                 ))}
               </div>
+            </>
+          )}
+
+          {currentStepId === 'short-answer' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-2">Tell us about yourself</h2>
+              <p className="text-sm text-[#8b9aad] mb-3">
+                The AI reads this directly to personalize your course plan and professor matches.
+                Mention what excites you, what you struggled with, specific courses you want,
+                how ambitious you are, or anything else relevant.
+              </p>
+              <div className="bg-[#0a0e14] border border-[#1e2a3a] rounded-lg p-3 mb-4">
+                <p className="text-xs text-[#6b7a8d] mb-1.5">Examples:</p>
+                <div className="space-y-1.5 text-xs text-[#8b9aad]">
+                  {data.yearType === 'first' ? (
+                    <>
+                      <p className="pl-2 border-l border-[#243040]">"I love math and want to challenge myself — I'm considering MAT157 even if it's brutal"</p>
+                      <p className="pl-2 border-l border-[#243040]">"I did well in high school but never did proofs. CS is my main focus, math is secondary"</p>
+                      <p className="pl-2 border-l border-[#243040]">"I want to do life sci and honestly just need to pass calculus, not interested in proof-based math"</p>
+                    </>
+                  ) : data.yearType === 'second' ? (
+                    <>
+                      <p className="pl-2 border-l border-[#243040]">"I finished MAT157 with an A and want to push into MAT257+MAT240 together next year"</p>
+                      <p className="pl-2 border-l border-[#243040]">"MAT137 went okay but STA237 was rough. I want to make sure I'm solid before going further"</p>
+                      <p className="pl-2 border-l border-[#243040]">"CS specialist aiming for ML. I know I need MAT237 and STA238 to unlock CSC311"</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="pl-2 border-l border-[#243040]">"3rd year CS, done CSC263 and CSC311. Want to go deep into deep learning — CSC413 and CSC412"</p>
+                      <p className="pl-2 border-l border-[#243040]">"Math specialist, finished MAT257. Aiming for pure math grad school — topology and algebra next"</p>
+                      <p className="pl-2 border-l border-[#243040]">"I have 5 course slots. Want to finish the specialist requirements but also branch into stats"</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <textarea
+                value={data.shortAnswer}
+                onChange={(e) => update('shortAnswer', e.target.value)}
+                placeholder="Write freely — the more specific, the better your plan will be..."
+                rows={6}
+                className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC] resize-none text-sm leading-relaxed"
+              />
+              <p className={'text-xs mt-2 ' + (data.shortAnswer.length < 20 ? 'text-[#6b7a8d]' : 'text-green-400')}>
+                {data.shortAnswer.length < 20 ? 'Write at least a sentence or two' : 'Good — the AI will use this directly'}
+              </p>
             </>
           )}
 
@@ -642,6 +672,39 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                   />
                 </div>
               </div>
+            </>
+          )}
+
+          {currentStepId === 'professor-preference' && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                What kind of professor works best for you?
+              </h2>
+              <p className="text-sm text-[#8b9aad] mb-3">
+                This is used to find your best professor match — not just the highest-rated one.
+                Some students thrive under demanding low-rated professors.
+                Some need warmth and support. Be honest.
+              </p>
+              <div className="bg-[#0a0e14] border border-[#1e2a3a] rounded-lg p-3 mb-4">
+                <p className="text-xs text-[#6b7a8d] mb-2">Examples:</p>
+                <div className="space-y-1.5 text-xs text-[#8b9aad]">
+                  <p className="pl-2 border-l border-[#243040]">"I want someone who pushes me hard — I don't care if they're a tough grader, I learn more that way"</p>
+                  <p className="pl-2 border-l border-[#243040]">"I need clear organized explanations. RMP rating matters to me and I go to office hours"</p>
+                  <p className="pl-2 border-l border-[#243040]">"I prefer dry rigorous lectures with no hand-holding. I teach myself from the textbook anyway"</p>
+                  <p className="pl-2 border-l border-[#243040]">"I want someone whose research connects to what I want to do — I'm planning to do a reading course or research with them"</p>
+                  <p className="pl-2 border-l border-[#243040]">"I just need to pass. I want the most lenient grader who gives the most structured guidance"</p>
+                </div>
+              </div>
+              <textarea
+                value={data.professorPreference}
+                onChange={(e) => update('professorPreference', e.target.value)}
+                placeholder="Describe your ideal professor in your own words..."
+                rows={5}
+                className="w-full px-4 py-3 rounded-lg bg-[#0a0e14] border border-[#1e2a3a] text-white placeholder-[#6b7a8d] focus:outline-none focus:ring-2 focus:ring-[#0066CC] resize-none text-sm leading-relaxed"
+              />
+              <p className={'text-xs mt-2 ' + (data.professorPreference.length < 10 ? 'text-[#6b7a8d]' : 'text-green-400')}>
+                {data.professorPreference.length < 10 ? 'Write at least a sentence' : 'The AI will use this directly for professor matching'}
+              </p>
             </>
           )}
 
