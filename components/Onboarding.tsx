@@ -19,7 +19,8 @@ export interface OnboardingData {
   examPreference: string
   officeHoursImportance: string
   communicationPreference: string
-  goals?: string // 适配 Chat API
+  goals?: string 
+  [key: string]: any 
 }
 
 const STORAGE_KEY = 'uoft-ai-onboarding'
