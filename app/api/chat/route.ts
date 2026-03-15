@@ -1,59 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const SYSTEM_PROMPT = `You are UofT AI Assistant, helping University of Toronto students with course selection and professor analysis. You have access to UofT course data, Rate My Professors insights, and Reddit r/UofT discussions. Be specific, honest, and helpful. When discussing professors, analyze teaching style, exam patterns, and student fit.`
-
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.OPENROUTER_API_KEY
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'OPENROUTER_API_KEY is not configured' },
-        { status: 500 }
-      )
-    }
+    if (!apiKey) return NextResponse.json({ error: 'API Key missing' }, { status: 500 })
 
     const body = await req.json()
-    const { messages } = body as { messages: { role: string; content: string }[] }
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json(
-        { error: 'messages array is required' },
-        { status: 400 }
-      )
+    // 关键改动：接收前端传来的 studentProfile
+    const { messages, studentProfile } = body as { 
+      messages: { role: string; content: string }[],
+      studentProfile: any 
     }
 
-    // 调用 OpenRouter API
+    // 将用户画像动态注入系统提示词
+    const DYNAMIC_SYSTEM_PROMPT = `
+      You are UofT AI Assistant. 
+      USER CONTEXT:
+      - Name: ${studentProfile?.name || 'Student'}
+      - Program: ${studentProfile?.programOfStudy}
+      - Completed Courses: ${JSON.stringify(studentProfile?.coursesCompleted)}
+      - Learning Style: ${studentProfile?.learningStyle}
+      - Goals: ${studentProfile?.goals}
+      
+      INSTRUCTIONS:
+      Use this context to provide personalized advice. If they ask for recommendations, 
+      refer to their completed courses and interests. Be concise and use a supportive tone.
+    `
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://your-site-domain.com', // 可选：用于OpenRouter统计
-        'X-Title': 'UofT AI Assistant',                 // 可选
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet', // 在 OpenRouter 中指定你想要的 Claude 模型
+        model: 'anthropic/claude-3.5-sonnet',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: DYNAMIC_SYSTEM_PROMPT },
           ...messages
         ],
       }),
     })
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error?.message || 'Failed to communicate with OpenRouter')
-    }
-
     const data = await response.json()
-    const text = data.choices[0].message.content
-
+    const text = data.choices[0]?.message?.content || ''
     return NextResponse.json({ content: text })
   } catch (error) {
-    console.error('Chat API error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get AI response' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Chat Error' }, { status: 500 })
   }
 }
