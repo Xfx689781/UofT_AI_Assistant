@@ -73,11 +73,17 @@ export async function POST(req: Request) {
     const isVeryConfident = selfAssessment === 'strong' && (isHighCapacity || isGradSchool)
 
     const selfAssessmentContext = selfAssessment === 'shaky'
-      ? 'SHAKY: Student has gaps or low confidence. Consolidate. Do not push hard courses. Prefer MAT135+MAT136 over MAT137Y1 unless they specifically mention wanting proofs.'
-      : selfAssessment === 'strong'
-        ? 'STRONG: Push MAT157 for the first year, MAT240 for first year fall, MAT247+CSC240 for first year winter, and student excelled and wants acceleration. Push other upper-year courses as early as possible if prereqs met.'
-        : 'SOLID: Standard progression.'
-
+  ? yearType === 'first'
+    ? 'SHAKY FIRST YEAR: Student has low confidence. Prefer MAT135H1+MAT136H1 over MAT137Y1 unless they specifically say they want proofs. Do not push hard courses.'
+    : 'SHAKY UPPER YEAR: Student struggled but is already in their program. Do NOT send them back to first year courses. Lighter load max 4 courses per semester, avoid stacking multiple very hard courses, if missing a prerequisite from their own year level include it but never go below their current year, prioritize courses with better professor support.'
+  : selfAssessment === 'strong'
+    ? yearType === 'first'
+      ? 'STRONG FIRST YEAR: Student excelled and wants to be challenged. Read their short answer carefully to decide how ambitious to be. Possible harder alternatives depending on their program and what they say: MAT157Y1 instead of MAT137Y1 for math-heavy students, MAT240H1 in Fall alongside MAT157Y1 for very ambitious math students, MAT247H1 in Winter for exceptionally strong math students, CSC240H1 instead of CSC165H1 for theory-focused CS students, PHY151H1+PHY152H1 instead of PHY131+PHY132 for physics students, CHM151Y1 instead of CHM135+CHM136 for chemistry students. These can overlap — a student can be strong in both math and CS simultaneously. Do NOT mechanically apply all of these. Use the short answer to judge which ones actually apply to this student and how many they can realistically handle.'
+      : yearType === 'second'
+        ? 'STRONG SECOND YEAR: Student excelled in first year and wants acceleration. Read their short answer to calibrate. Can handle more courses per semester and harder combinations. For example a strong math student can take MAT257Y1+MAT327H1+MAT267H1 in the same year. A strong CS student can push CSC265H1 in second year. Let the short answer guide how aggressive to be.'
+        : 'STRONG THIRD/FOURTH YEAR: Student excelled and wants advanced material. Can include 400-level courses if prereqs met. Can handle 5 courses per semester. Read their short answer to understand their specific direction and ambition level.'
+    : 'SOLID: Standard progression for their year level.'
+     
     const courseList = [
       'MAT135H1=Calculus I (Fall only H1)',
       'MAT136H1=Calculus II (Winter only H1)',
