@@ -164,7 +164,7 @@ export async function POST(req: Request) {
       'CSC240H1=Discrete Mathematics for CS (H1) harder alternative to CSC165 needs CSC148',
       'CSC258H1=Computer Organization (H1) needs CSC148+CSC165',
       'CSC263H1=Data Structures and Analysis (H1) needs CSC207+CSC236',
-      'CSC265H1=Enriched Data Structures (H1) needs CSC240+MAT157 (but MAT157 can usually be waived),
+      'CSC265H1=Enriched Data Structures (H1) needs CSC240+MAT157 (but MAT157 can usually be waived)',
       'CSC311H1=Introduction to Machine Learning (H1) needs CSC207+MAT237+STA238',
       'CSC304H1=Algorithmic Game Theory and Mechanism Design (H1)',
       'CSC316H1=Data Visualization (H1)',
