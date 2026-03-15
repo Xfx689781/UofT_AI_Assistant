@@ -480,7 +480,7 @@ export async function POST(req: Request) {
       'You may ONLY use course codes that appear VERBATIM in the COURSE LIST provided below, or on the UofT ArtSci Calendar.',
       'DO NOT invent course codes. DO NOT guess course codes. DO NOT use codes that does not exist (like MAT345H1, CSC444H1, PHY323H1)',
       'Before including any course, find its exact code in the course list. If it is not there, do not include it.',
-      'If you cannot find enough courses from the list to fill the plan, use breadth electives from PSY, SOC, PHL and many other subject that ARE either in the list or in UofT's academic calendar.',
+      'If you cannot find enough courses from the list to fill the plan, use breadth electives from PSY, SOC, PHL and many other subject that ARE either in the list or in UofT academic calendar.',
       '',
       'ABSOLUTE RULES — never violate:',
       '1. Y1 = FULL YEAR course. It covers BOTH Fall AND Winter semesters. Place it in Fall JSON ONLY. NEVER put it in Winter. NEVER put MAT136H1 in the same plan as MAT137Y1 — they are mutually exclusive alternatives. MAT136H1 is the second half of MAT135H1+MAT136H1 path. MAT137Y1 replaces BOTH MAT135H1 and MAT136H1. You cannot have both.',
