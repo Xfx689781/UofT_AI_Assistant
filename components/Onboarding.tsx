@@ -590,7 +590,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
                 <div className="space-y-1.5 text-xs text-[#8b9aad]">
                   {data.yearType === 'first' ? (
                     <>
-                      <p className="pl-2 border-l border-[#243040]">"I love math and want to challenge myself — I'm considering MAT157 even if it's brutal"</p>
+                      <p className="pl-2 border-l border-[#243040]">"I want to challenge myself — I'm considering hard courses even if they're brutal"</p>
                       <p className="pl-2 border-l border-[#243040]">"I did well in high school but never did proofs. CS is my main focus, math is secondary"</p>
                       <p className="pl-2 border-l border-[#243040]">"I want to do life sci and honestly just need to pass calculus, not interested in proof-based math"</p>
                     </>
