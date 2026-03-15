@@ -1,86 +1,67 @@
-# UofT AI Assistant
+# UTbot 🎓
 
-A Next.js 14 app that helps University of Toronto students with **course selection** and **professor analysis**. It uses Claude (Anthropic) for conversational AI and mock UofT professor data for ratings and insights.
+**AI-powered course planning, professor matching and academic partner for UofT students.**
 
-## Tech stack
+Built at [GenAI Genesis 2026](https://genai-genesis.com) hackathon · University of Toronto · March 2026
 
-- **Next.js 14** (App Router)
-- **TypeScript**
-- **Tailwind CSS**
-- **Claude API** (Anthropic SDK) for AI chat
-- **Recharts** for data visualization (radar charts, line charts)
+🔗 **Live:** https://uof-t-ai-assistant.vercel.app
+
+---
+
+## What it does
+
+UTbot helps UofT students navigate one of the most overwhelming parts of university — figuring out what courses to take and which professor to pick.
+
+**Course Planner** — Tell UTbot your year, program, completed courses, and goals. It generates a personalized Fall + Winter (and 3rd/4th year: all four semesters) course plan that respects prerequisites, your learning style, and your ambition level. It knows the difference between MAT137Y1 and MAT157Y1, understands Y1 vs H1 course structures, and won't put STA237 in your plan if you're still taking MAT137.
+
+**Professor Lens** — Enter any course code and UTbot searches RMP, Reddit r/UofT, and recent timetable data to find the professor whose teaching style best matches *your* learning profile — not just the highest-rated one. A student who wants to be pushed hard gets a different recommendation than one who needs structured support.
+
+---
 
 ## Features
 
-- **Onboarding** – Collect program, year, completed courses, learning style, and goals (stored in `localStorage`).
-- **Dashboard** – Welcome message, quick actions (recommend courses, analyze professor, degree progress), and an AI chat panel.
-- **Professor profiles** – Per-professor pages with:
-  - 6-dimension radar chart (Teaching Clarity, Exam Difficulty, Workload, Accessibility, Grading Fairness, Course Engagement)
-  - Historical trend chart (2022–2025)
-  - AI-generated prediction for the next year
-  - Tags and sample student quotes (synthesized)
-- **API routes**
-  - `POST /api/chat` – Chat with Claude (UofT-focused system prompt).
-  - `GET /api/professor` – Professor list or single professor by `?slug=...`.
+- Multi-step onboarding capturing year, program, completed courses, learning style, self-assessment, and a free-text short answer the AI reads directly
+- Personalized course plans for First Year, Second Year, and Third/Fourth Year (4 semesters)
+- Handles Y1/H1 distinction, mutual exclusions (MAT137 vs MAT157), prerequisite chains
+- Professor matching using live Tavily search + OpenRouter AI analysis
+- Student archetype system (GRAD_SCHOOL_BOUND, NEEDS_SUPPORT, SELF_STUDY_LEARNER, etc.) for professor scoring
+- Built-in AI chat assistant for follow-up questions
 
-## Project structure
+---
 
-```
-/app
-  page.tsx              # Onboarding (redirects if already onboarded)
-  dashboard/page.tsx     # Main dashboard + chat
-  professor/[name]/page.tsx  # Professor profile
-  api/chat/route.ts      # Claude chat endpoint
-  api/professor/route.ts # Professor data endpoint
-/components
-  Onboarding.tsx
-  Chat.tsx
-  ProfessorCard.tsx
-  RadarChart.tsx
-/lib
-  claude.ts             # Claude client helpers
-  data.ts               # Mock professor data (5 UofT math professors)
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
+| Course Planning AI | OpenRouter (gpt-4o-mini) |
+| Professor Search | Tavily API |
+| Chat | Anthropic Claude API |
+| Deployment | Vercel |
+
+---
+
+## Getting Started
+```bash
+git clone https://github.com/Xfx689781/UofT_AI_Assistant
+cd UofT_AI_Assistant
+npm install
 ```
 
-## Setup
+Create `.env.local`:
+```
+ANTHROPIC_API_KEY=your_key
+OPENROUTER_API_KEY=your_key
+TAVILY_API_KEY=your_key
+```
+```bash
+npm run dev
+```
 
-1. **Clone and install**
+Open [http://localhost:3000](http://localhost:3000)
 
-   ```bash
-   cd uoft-ai-assistant
-   npm install
-   ```
+---
 
-2. **Environment**
+## Team
 
-   Create `.env.local` in the project root:
-
-   ```env
-   ANTHROPIC_API_KEY=your_anthropic_api_key_here
-   ```
-
-   Get an API key from [Anthropic](https://console.anthropic.com/).
-
-3. **Run**
-
-   ```bash
-   npm run dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000). Complete onboarding, then use the dashboard and professor pages.
-
-## Design
-
-- **Theme:** Dark background (`#0a0e14`), UofT blue (`#002A5C`, `#0066CC`), gold accents (`#FFD700`).
-- **Data:** Mock data for 5 UofT math professors in `lib/data.ts`. Replace with real data or your own API when ready.
-
-## Scripts
-
-- `npm run dev` – Development server
-- `npm run build` – Production build
-- `npm run start` – Run production server
-- `npm run lint` – Run ESLint
-
-## License
-
-MIT.
+Built in 36 hours at GenAI Genesis 2026 · UofT.
