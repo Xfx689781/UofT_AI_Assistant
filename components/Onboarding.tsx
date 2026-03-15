@@ -107,8 +107,18 @@ export const defaultOnboardingData: OnboardingData = {
 export function saveOnboardingData(data: OnboardingData) {
   if (typeof window !== 'undefined') {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    // 同时存一份到 dashboard 通用的 key 
     localStorage.setItem('onboarding_data', JSON.stringify(data))
+  }
+}
+
+export function getOnboardingData(): OnboardingData | null {
+  if (typeof window === 'undefined') return null
+  const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('onboarding_data')
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as OnboardingData
+  } catch {
+    return null
   }
 }
 
