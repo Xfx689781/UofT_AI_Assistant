@@ -149,7 +149,7 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
               {isRecommended && (
                 <span className="px-2 py-0.5 rounded-full bg-[#0066CC] text-white text-xs font-bold">★ Best for you</span>
               )}
-              {prof.hasResearch && (
+              {prof.hasResearch && prof.researchArea && prof.researchArea !== 'not specified in search data' && prof.researchArea !== '' && (
                 <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 text-xs">🔬 Research</span>
               )}
             </div>
@@ -203,13 +203,17 @@ function ProfessorCard({ prof, isRecommended }: { prof: Professor; isRecommended
             <p className="text-[#c8d4e0] text-sm">{prof.studentCompatibility}</p>
           </div>
 
-          {prof.hasResearch && (
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-              <p className="text-xs text-purple-400 font-semibold mb-1">🔬 Research Background</p>
-              <p className="text-white text-sm font-medium">{prof.researchArea}</p>
-              <p className="text-[#8b9aad] text-xs mt-1">{prof.teachingResearchAlignment}</p>
-            </div>
-          )}
+          {prof.hasResearch && prof.researchArea && prof.researchArea !== 'not specified in search data' && prof.researchArea !== '' ? (
+          <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+            <p className="text-xs text-purple-400 font-semibold mb-1">🔬 Research Background</p>
+            <p className="text-white text-sm font-medium">{prof.researchArea}</p>
+            <p className="text-[#8b9aad] text-xs mt-1">{prof.teachingResearchAlignment}</p>
+          </div>) : (
+          <div className="bg-[#1e2a3a]/50 border border-[#1e2a3a] rounded-lg p-3">
+            <p className="text-xs text-[#8b9aad] font-semibold mb-1">🎓 Teaching Stream</p>
+            <p className="text-[#c8d4e0] text-sm">This professor focuses entirely on teaching with no confirmed active research program.</p>
+          </div>
+        )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-[#0a0e14] rounded-lg p-3">
