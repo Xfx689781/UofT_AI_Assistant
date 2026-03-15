@@ -195,7 +195,7 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-function TagInput({ tags, onTagsChange, placeholder = 'Type course code and press Enter' }: {
+function TagInput({ tags, onTagsChange, placeholder = 'Select ALL COURSES that you have taken.' }: {
   tags: string[]
   onTagsChange: (tags: string[]) => void
   placeholder?: string
@@ -227,7 +227,7 @@ function TagInput({ tags, onTagsChange, placeholder = 'Type course code and pres
           className="flex-1 min-w-[140px] bg-transparent text-white placeholder-[#6b7a8d] focus:outline-none text-sm py-1"
         />
       </div>
-      <p className="text-xs text-[#6b7a8d]">Press Enter to add each course</p>
+      <p className="text-xs text-[#6b7a8d]">Type your answer and press enter.</p>
     </div>
   )
 }
@@ -249,22 +249,25 @@ function ChipSelect({ options, selected, onToggle }: {
 }
 
 const SECOND_YEAR_CHIPS = [
-  'MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT237', 'MAT240', 'MAT244', 'MAT246',
-  'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258',
-  'STA130', 'STA237', 'STA238', 'STA247', 'STA257',
-  'PHY131', 'PHY132', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100',
+  'MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT235', 'MAT237', 'MAT240', 'MAT244', 'MAT246', 'MAT247',
+  'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC240', 'CSC258', 
+  'STA130',
+  'PHY131', 'PHY132', 'PHY151', 'PHY152', 'CHM135', 'CHM136', 'CHM151', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100',
 ]
 
 const THIRD_YEAR_CHIPS = [
   'MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT235', 'MAT237', 'MAT240', 'MAT244',
-  'MAT246', 'MAT247', 'MAT257', 'MAT267', 'MAT301', 'MAT315', 'MAT327', 'MAT334', 'MAT337', 'MAT344',
-  'MAT347', 'MAT354', 'MAT357', 'MAT363',
-  'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258', 'CSC263', 'CSC311', 'CSC343',
-  'CSC369', 'CSC373', 'CSC384', 'CSC401', 'CSC412', 'CSC413', 'CSC420', 'CSC448', 'CSC458', 'CSC463',
-  'STA237', 'STA238', 'STA247', 'STA257', 'STA261', 'STA302', 'STA347',
+  'MAT246', 'MAT247', 'MAT257', 'MAT267', 'MAT301', 'MAT309', 'MAT315', 'MAT327', 'MAT334', 'MAT337', 'MAT344',
+  'MAT347', 'MAT351', 'MAT354', 'MAT357', 'MAT363',  
+  'APM236', 'APM346', 'APM348', 'APM462'
+  'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC240', 'CSC258', 'CSC263', 'CSC265', 'CSC311', 'CSC324', 'CSC343',
+  'CSC369', 'CSC373', 'CSC384', 
+  'STA130', 'STA237', 'STA238', 'STA247', 'STA248', 'STA257', 'STA261', 'STA302', 'STA347',
   'PHY131', 'PHY132', 'PHY151', 'PHY152', 'PHY254', 'PHY256', 'PHY350', 'PHY354',
+  'CHM135', 'CHM136', 'CHM151'
   'BIO120', 'BIO130', 'BIO230', 'BIO240',
-  'ECO101', 'ECO102', 'ECO200', 'ECO202', 'ECO220', 'ECO325', 'ECO358',
+  'BCH210',
+  'ECO101', 'ECO102', 'ECO200', 'ECO202', 'ECO206', 'ECO220', 'ECO325', 'ECO358',
   'PSY100', 'PSY201', 'PSY220', 'PSY230', 'PSY240', 'PSY270',
 ]
 
