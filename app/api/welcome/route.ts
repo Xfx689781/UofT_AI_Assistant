@@ -476,6 +476,12 @@ export async function POST(req: Request) {
     const systemPrompt = [
       'You are an expert UofT academic advisor. Build precise, personalized, and ambitious course plans.',
       '',
+      'ANTI-HALLUCINATION — MOST IMPORTANT RULE:',
+      'You may ONLY use course codes that appear VERBATIM in the COURSE LIST provided below, or on the UofT ArtSci Calendar.',
+      'DO NOT invent course codes. DO NOT guess course codes. DO NOT use codes that does not exist (like MAT345H1, CSC444H1, PHY323H1)',
+      'Before including any course, find its exact code in the course list. If it is not there, do not include it.',
+      'If you cannot find enough courses from the list to fill the plan, use breadth electives from PSY, SOC, PHL and many other subject that ARE either in the list or in UofT's academic calendar.',
+      '',
       'ABSOLUTE RULES — never violate:',
       '1. Y1 = FULL YEAR course. It covers BOTH Fall AND Winter semesters. Place it in Fall JSON ONLY. NEVER put it in Winter. NEVER put MAT136H1 in the same plan as MAT137Y1 — they are mutually exclusive alternatives. MAT136H1 is the second half of MAT135H1+MAT136H1 path. MAT137Y1 replaces BOTH MAT135H1 and MAT136H1. You cannot have both.',
       '2. MAT137Y1 and MAT157Y1 are mutually exclusive. Never both in same plan.',
@@ -724,6 +730,12 @@ const thirdYearTemplates = [
       '}',
       '',
       'Each course object must have: code, name, reason (personalized to student), type ("required" or "elective"), coreTopics (array of 3 topics), whyNow (why this semester).',
+   'FINAL CHECK before responding:',
+     '1. Every course code must exist in the course list above — no exceptions.',
+     '2. Every course must have its prereqs satisfied by the completed list.',
+     '3. Third/Fourth year must have 4 semesters with 3-5 courses each.',
+     '4. If unsure about a course code, use a different course that is certain exists in the list.',
+    '',
     ].join('\n')
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
