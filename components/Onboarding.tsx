@@ -1,6 +1,6 @@
 'use client'
 
-import  useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
 export interface OnboardingData {
   name: string
