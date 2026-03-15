@@ -43,10 +43,10 @@ export default function LandingPage() {
               Powered by AI · Built for UofT
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              UofT AI Assistant
+              UTbot
             </h1>
             <p className="text-sm md:text-base text-[#c8d4e0] mb-6 max-w-md">
-              Your personalized academic advisor for course selection, professor insights, and POSt planning at the University of Toronto.
+              Your personalized academic advisor for course selection, professor insights, and chatbot at the University of Toronto.
             </p>
           </div>
           <div className="hidden md:block text-xs text-[#6b7a8d]">
