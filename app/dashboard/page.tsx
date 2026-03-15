@@ -326,7 +326,7 @@ export default function DashboardPage() {
           {/* Chat */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 h-[calc(100vh-8rem)] min-h-[500px]">
-              <Chat />
+              <Chat studentProfile={profile} />
             </div>
           </div>
         </div>
