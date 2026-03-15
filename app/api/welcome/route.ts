@@ -58,8 +58,8 @@ export async function POST(req: Request) {
     const isPhysics = program.toLowerCase().includes('physics') || interests.includes('Physics')
 
     const yearLabel = yearType === 'first' ? 'First Year' : yearType === 'second' ? 'Second Year' : 'Third or Fourth Year'
-    const targetFall = 'Fall 2025'
-    const targetWinter = 'Winter 2026'
+    const targetFall = yearType === 'first' ? 'First Year Fall' : yearType === 'second' ? 'Second Year Fall' : 'Third Year Fall'
+    const targetWinter = yearType === 'first' ? 'First Year Winter' : yearType === 'second' ? 'Second Year Winter' : 'Third Year Winter'
 
     // Detect ambition signals from short answer
     const shortLower = shortAnswer.toLowerCase()
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     const selfAssessmentContext = selfAssessment === 'shaky'
       ? 'SHAKY: Student has gaps or low confidence. Consolidate. Do not push hard courses. Prefer MAT135+MAT136 over MAT137Y1 unless they specifically mention wanting proofs.'
       : selfAssessment === 'strong'
-        ? 'STRONG: Student excelled and wants acceleration. Push upper-year courses early if prereqs met.'
+        ? 'STRONG: Push MAT157 for the first year, MAT240 for first year fall, MAT247+CSC240 for first year winter, and student excelled and wants acceleration. Push other upper-year courses as early as possible if prereqs met.'
         : 'SOLID: Standard progression.'
 
     const courseList = [
@@ -128,12 +128,25 @@ export async function POST(req: Request) {
       'STA130H1=Introduction to Statistical Reasoning and Data Science (H1)',
       'STA237H1=Probability Statistics and Data Analysis I (H1) needs MAT137 completed',
       'STA238H1=Probability Statistics and Data Analysis II (H1)',
+      'STA247H1=Probability with Computer Applications (H1)',
+      'STA248H1=Statistics for Computer Scientists (H1)',
       'STA257H1=Probability and Statistics I (H1) needs MAT137 completed',
       'STA261H1=Probability and Statistics II (H1)',
       'STA302H1=Methods of Data Analysis I (H1)',
+      'STA303H1=Methods of Data Analysis II (H1)',
+      'STA365H1=Applied Bayesian Statistics (H1)',
       'STA347H1=Probability (H1)',
+      'STA447H1=Stochastic Processes (H1)',
+      'STA410H1=Statistical Computation (H1)',
+      'STA314H1=Statistical Methods of Machine Learning I (H1)',
+      'STA414H1=Statiscal Methods of Machine Learning II (H1)',
+      'STA437H1=Methods for Multivariate Data (H1)',
+      'STA465H1=Spatial Data Analysis (H1)',
+      "STA475H1=Survival Analysis (H1)',
+      'STA457H1=Time Series Analysis (H1)',
       'CSC108H1=Introduction to Computer Programming (H1)',
-      'CSC110Y1=Foundations of Computer Science I (Full year Y1 Fall only)',
+      'CSC110Y1=Foundations of Computer Science I (ONLY FOR FIRST YEAR COMPUTER SCIENCE STUDENTS, Full year Y1 but Fall only)',
+      'CSC111H1=Foundations of Computer Science II (ONLY FOR FIRST YEAR COMPUTER SCIENCE STUDENTS, H1 winter only)',
       'CSC148H1=Introduction to Computer Science (H1)',
       'CSC165H1=Mathematical Expression and Reasoning for Computer Science (H1)',
       'CSC207H1=Software Design (H1) needs CSC148',
@@ -143,6 +156,9 @@ export async function POST(req: Request) {
       'CSC258H1=Computer Organization (H1) needs CSC148+CSC165',
       'CSC263H1=Data Structures and Analysis (H1) needs CSC207+CSC236',
       'CSC311H1=Introduction to Machine Learning (H1) needs CSC207+MAT237+STA238',
+      'CSC304H1=Algorithmic Game Theory and Mechanism Design (H1)',
+      'CSC316H1=Data Visualization (H1)',
+      'CSC318H1=The Design of Interactive Computational Media (H1)',
       'CSC343H1=Introduction to Databases (H1) needs CSC207',
       'CSC369H1=Operating Systems (H1) needs CSC209+CSC263',
       'CSC373H1=Algorithm Design and Analysis (H1) needs CSC263',
@@ -150,13 +166,16 @@ export async function POST(req: Request) {
       'CSC401H1=Natural Language Computing (H1) needs CSC207',
       'CSC412H1=Probabilistic Learning and Reasoning (H1) needs CSC311',
       'CSC413H1=Neural Networks and Deep Learning (H1) needs CSC311',
+      'CSC428H1=Human-Computer Interactions (H1)',
       'CSC317H1=Computer Graphics (H1) needs CSC209+MAT237+MAT223',
       'CSC420H1=Introduction to Image Understanding (H1) needs CSC263+MAT223',
       'CSC448H1=Formal Languages and Automata Theory (H1) needs CSC236+MAT223',
       'CSC458H1=Computer Networks (H1)',
+      'CSC436H1=Numerical Algorithms (H1)',
       'CSC463H1=Computational Complexity and Computability (H1) needs CSC236+MAT223',
       'CSC473H1=Advanced Algorithm Design (H1) needs CSC263',
-      'CSC485H1=Computational Linguistics (H1) needs CSC207',
+      'CSC485H1=Computational Linguistics (H1)',
+      'CSC486H1=Knowledge Representation and Reasoning (H1)',
       'CSC494H1=Computer Science Project (H1)',
       'PHY131H1=Introduction to Physics I (H1)',
       'PHY132H1=Introduction to Physics II (H1)',
@@ -233,7 +252,7 @@ export async function POST(req: Request) {
       'APM462H1 needs (MAT235Y1 or MAT237Y1 or MAT257Y1) and (MAT224H1 or MAT247H1)',
       'STA237H1 needs (MAT136H1 or MAT137Y1) and STA130H1',
       'STA247H1 needs (MAT136H1 or MAT137Y1) and STA130H1',
-      'STA257H1 needs (MAT137Y1 or MAT157Y1) and STA130H1',
+      'STA257H1 needs (MAT137Y1 or MAT157Y1) and STA130H1 and (CSC111H1 or CSC148H1)',
       'STA261H1 needs STA257H1',
       'STA238H1 needs STA237H1',
       'STA248H1 needs STA247H1',
@@ -243,7 +262,11 @@ export async function POST(req: Request) {
       'STA447H1 needs STA347H1',
       'STA437H1 needs STA302H1',
       'STA457H1 needs STA302H1',
+      'STA475H1 needs STA303H1',
+      'STA465H1 needs STA302H1 and STA303H1',
+      'STA410H1 needs STA302H1 and (CSC110Y1 or CSC148H1) and (MAT223H1 or MAT224H1 or MAT240H1)',
       'STA414H1 needs STA314H1',
+      'STA365H1 needs STA302H1',
       'STA314H1 needs STA302H1 and (CSC148H1 or CSC108H1) and (MAT235Y1 or MAT237Y1 or MAT257Y1) and (MAT223H1 or MAT240H1)',
       'CSC148H1 needs CSC108H1 or high school programming',
       'CSC207H1 needs CSC148H1',
@@ -254,6 +277,7 @@ export async function POST(req: Request) {
       'CSC263H1 needs CSC207H1 and CSC236H1 or CSC240H1',
       'CSC311H1 needs CSC207H1 and (MAT235Y1 or MAT237Y1 or MAT257Y1 or MAT157Y1(67%) or MAT137Y1(73%) or (MAT135H1(77%) and MAT136H1(77%)) and (STA257H1 or STA247H1 or STA237H1) and (MAT223H1 or MAT240H1)',
       'CSC343H1 needs CSC207H1',
+      'CSC304H1 needs (MAT136H1 or MAT137Y1 or MAT157Y1) and (STA237H1 or STA247H1 or STA157H1)',
       'CSC317H1 needs CSC209H1 and (MAT235Y1 or MAT237Y1 or MAT257Y1) and (MAT223H1 or MAT240H1)',
       'CSC369H1 needs CSC209H1 and CSC263H1',
       'CSC316H1 needs CSC207H1',
@@ -262,24 +286,27 @@ export async function POST(req: Request) {
       'CSC428H1 needs CSC318H1 and CSC207H1 and (STA237H1 or STA247H1 or STA257H1)',
       'CSC373H1 needs CSC263H1',
       'CSC458H1 needs CSC258H1 and CSC209H1 and CSC263H1',
-      'CSC384H1 needs CSC263H1 and MAT223H1',
+      'CSC384H1 needs CSC263H1 and (MAT223H1 or MAT240H1)',
       'CSC412H1 needs CSC311H1',
       'CSC413H1 needs CSC311H1',
-      'CSC417H1 needs CSC317H1 and CSC207H1 and MAT237Y1',
+      'CSC417H1 needs CSC209H1 and (MAT235Y1 or MAT237Y1 or MAT257Y1) and (MAT223H1 or MAT240H1)',
       'CSC420H1 needs CSC320H1 and CSC263H1 and MAT223H1',
       'CSC448H1 needs CSC236H1 and CSC263H1',
+      'CSC436H1 needs CSC336H1',
       'CSC463H1 needs CSC373H1 and MAT223H1',
+      'CSC485H1 needs CSC209H1 and (STA237H1 or STA247H1 or STA257H1)',
+      'CSC486H1 needs CSC384H1',
       'CSC469H1 needs CSC369H1',
     ].join('\n')
 
     const futureDirectionMap: Record<string, string> = {
-      'ml-ai': 'Need: CSC148+CSC165 -> CSC207+CSC236 -> CSC263 -> CSC311 -> CSC412/CSC413. Also needs MAT237Y1 and STA238H1 for CSC311.',
+      'ml-ai': 'Need: CSC148+CSC165 -> CSC207+CSC236 -> CSC263 -> CSC311 -> CSC412/CSC413/CSC486.',
       'systems': 'Need: CSC148+CSC165 -> CSC207+CSC209 -> CSC258+CSC263 -> CSC369+CSC458.',
       'theory-cs': 'Need: CSC148+CSC165/CSC240 -> CSC236 -> CSC263 -> CSC373+CSC463+CSC448. CSC240 recommended over CSC165 for theory track.',
-      'vision-graphics': 'Need: CSC263 -> CSC420+CSC418. Also needs MAT237Y1 and MAT223H1.',
+      'vision-graphics': 'Need: CSC263 -> CSC320 -> CSC420+CSC317. Also needs MAT237Y1 and MAT223H1.',
       'nlp': 'Need: CSC207 -> CSC401+CSC485+CSC311.',
-      'pure-math': 'Need: MAT157Y1 -> MAT257Y1+MAT240H1 -> MAT247H1 -> MAT347Y1+MAT327H1+MAT357H1.',
-      'analysis': 'Need: MAT137/157 -> MAT237Y1+MAT246H1 -> MAT337H1+MAT354H1+MAT357H1.',
+      'pure-math': 'Need: MAT157Y1 -> MAT240H1+MAT247H1 -> MAT257Y1 -> MAT347Y1+MAT327H1+MAT357H1+MAT351Y1+MAT354H1 -> MAT4XXH1.',
+      'analysis': 'Need: MAT137/157 -> MAT237Y1+MAT246H1 -> MAT337H1+MAT354H1+MAT357H1 -> MAT454H1+MAT457H1.',
       'algebra': 'Need: MAT137/157 -> MAT240H1 -> MAT246H1+MAT247H1 -> MAT301H1+MAT315H1+MAT347Y1.',
       'stats-data': 'Need: MAT137 -> STA237H1+STA238H1 -> STA302H1+STA347H1. Also CSC343H1.',
       'quant-finance': 'Need: MAT137 -> STA257H1+STA261H1 -> STA347H1+MAT337H1+ECO358H1.',
