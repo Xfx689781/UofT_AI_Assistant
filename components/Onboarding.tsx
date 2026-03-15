@@ -108,10 +108,7 @@ const PROGRAM_TREE: { category: string; icon: string; programs: string[] }[] = [
       'Drama Specialist', 'Drama Major', 'Drama Minor',
     ],
   },
-  {
-    category: 'Music', icon: '🎵',
-    programs: ['Music Specialist', 'Music Major', 'Music Minor'],
-  },
+  { category: 'Music', icon: '🎵', programs: ['Music Specialist', 'Music Major', 'Music Minor'] },
   {
     category: 'Languages', icon: '🗣️',
     programs: [
@@ -201,10 +198,7 @@ export function getOnboardingData(): OnboardingData | null {
   }
 }
 
-function TagInput({
-  tags, onTagsChange,
-  placeholder = 'Type course code and press Enter',
-}: {
+function TagInput({ tags, onTagsChange, placeholder = 'Type course code and press Enter' }: {
   tags: string[]
   onTagsChange: (tags: string[]) => void
   placeholder?: string
@@ -221,9 +215,9 @@ function TagInput({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2 p-2 min-h-[44px] rounded-lg bg-[#0a0e14] border border-[#1e2a3a] focus-within:ring-2 focus-within:ring-[#0066CC]">
         {tags.map((tag, i) => (
-          <span key={`${tag}-${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#002A5C] text-[#e8ecf1] text-sm">
+          <span key={tag + i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#002A5C] text-[#e8ecf1] text-sm">
             {tag}
-            <button type="button" onClick={() => removeTag(i)} className="text-[#8b9aad] hover:text-white ml-0.5">×</button>
+            <button type="button" onClick={() => removeTag(i)} className="text-[#8b9aad] hover:text-white ml-0.5">x</button>
           </span>
         ))}
         <input type="text" value={value}
@@ -262,8 +256,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const isFirst = stepIndex === 0
   const isLast = stepIndex === steps.length - 1
 
-  const update = useCallback(<K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
-    setData((d) => ({ ...d, [key]: value }))
+  const update = useCallback(<K extends keyof OnboardingData>(key: K, val: OnboardingData[K]) => {
+    setData((d) => ({ ...d, [key]: val }))
   }, [])
 
   const goNext = useCallback(() => {
@@ -271,9 +265,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     else { setStepIndex((i) => i + 1) }
   }, [isLast, data, onComplete])
 
-  const goBack = useCallback(() => {
-    setStepIndex((i) => Math.max(0, i - 1))
-  }, [])
+  const goBack = useCallback(() => setStepIndex((i) => Math.max(0, i - 1)), [])
 
   const selectedCategory = PROGRAM_TREE.find(c => c.category === data.programCategory)
 
@@ -287,8 +279,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       case 'goals-first': return data.goalsFirstYear.length > 0
       case 'program-category': return data.programCategory.length > 0
       case 'program-select':
-        if (data.programCategory === 'Other') return data.programOther.trim().length > 0
-        return data.programOfStudy.length > 0
+        return data.programCategory === 'Other' ? data.programOther.trim().length > 0 : data.programOfStudy.length > 0
       case 'courses-completed': return true
       case 'goals-upper': return data.goalsSecondYear.length > 0
       case 'learning-style': return data.learningStyle.length > 0
@@ -297,8 +288,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     }
   }, [currentStepId, data])
 
-  const firstYearCourses = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'CSC108', 'CSC110Y1', 'CSC148', 'CSC165', 'STA130', 'PHY131', 'PHY132', 'CHM135', 'CHM136', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100']
-  const upperYearCourses = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT235', 'MAT237', 'MAT240', 'MAT244', 'MAT246', 'MAT247', 'MAT257', 'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258', 'CSC263', 'STA237', 'STA238', 'STA247', 'PHY131', 'PHY132', 'BIO120', 'BIO130', 'PSY100', 'SOC100', 'ECO101', 'ECO102']
+  const firstYearChips = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'CSC108', 'CSC110Y1', 'CSC148', 'CSC165', 'STA130', 'PHY131', 'PHY132', 'CHM135', 'CHM136', 'BIO120', 'BIO130', 'ECO101', 'ECO102', 'PSY100', 'SOC100']
+  const upperYearChips = ['MAT135', 'MAT136', 'MAT137', 'MAT157', 'MAT223', 'MAT224', 'MAT235', 'MAT237', 'MAT240', 'MAT244', 'MAT246', 'MAT247', 'MAT257', 'CSC108', 'CSC148', 'CSC165', 'CSC207', 'CSC209', 'CSC236', 'CSC258', 'CSC263', 'STA237', 'STA238', 'STA247', 'PHY131', 'PHY132', 'BIO120', 'BIO130', 'PSY100', 'SOC100', 'ECO101', 'ECO102']
 
   return (
     <div className="min-h-screen bg-[#0a0e14] flex flex-col items-center justify-center p-6">
@@ -307,7 +298,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           <h1 className="text-2xl font-bold text-white mb-1">UofT AI Assistant</h1>
           <p className="text-[#8b9aad] text-sm">Step {stepIndex + 1} of {totalSteps}</p>
           <div className="mt-3 h-1.5 bg-[#121922] rounded-full overflow-hidden">
-            <div className="h-full bg-[#0066CC] rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-[#0066CC] rounded-full transition-all duration-500" style={{ width: progress + '%' }} />
           </div>
         </div>
 
@@ -315,7 +306,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
           {currentStepId === 'name' && (
             <>
-              <h2 className="text-xl font-semibold text-white mb-6">What&apos;s your name?</h2>
+              <h2 className="text-xl font-semibold text-white mb-6">What is your name?</h2>
               <input type="text" value={data.name}
                 onChange={(e) => update('name', e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && canProceed && goNext()}
@@ -331,30 +322,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               <h2 className="text-xl font-semibold text-white mb-2">Where are you in your journey?</h2>
               <p className="text-sm text-[#8b9aad] mb-6">This helps us recommend the right courses for your next step</p>
               <div className="space-y-3">
-                {[
-                  { value: 'first' as const, title: '🎓 Starting First Year', sub: "About to begin at UofT — haven't chosen a POSt yet", detail: "We'll recommend first-year courses and help you plan your POSt entry" },
-                  { value: 'second' as const, title: '📚 Entering Second Year', sub: 'Completed first year, now entering a program of study', detail: "We'll build on your first-year foundation and recommend second-year courses" },
-                  { value: 'third+' as const, title: '🚀 Third Year and Beyond', sub: 'In your program, planning upper-year courses', detail: "We'll recommend advanced courses tailored to your specialization and goals" },
-                ].map(({ value, title, sub, detail }) => (
-                  <button key={value} type="button"
-                    onClick={() => update('yearType', value)}
-                    className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 ${
-                      data.yearType === value
-                        ? 'border-[#0066CC] bg-[#002A5C]/50 shadow-lg shadow-[#0066CC]/20'
-                        : 'border-[#1e2a3a] bg-[#0a0e14]/50 hover:border-[#0066CC]/60 hover:bg-[#002A5C]/20'
-                    }`}
-                  >
-                    <span className="text-lg font-bold text-white block mb-0.5">{title}</span>
-                    <span className="text-sm text-[#8b9aad] block">{sub}</span>
-                    {data.yearType === value && (
-                      <span className="text-xs text-[#0066CC] block mt-2">→ {detail}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {currentStepId === 'admission' && (
-            <>
-              <h2 className="text-xl font-semibold text-white mb-6
+                {([
+                  { value: 'first', title: 'Starting First Year', sub: "About to begin at UofT, haven't chosen a POSt yet" },
+                  { value: 'second', title: 'Entering Second Year', sub: 'Completed first year, now entering a program of study' },
+                  { value: 'third+', title: 'Third Year and Beyond', sub: 'In your program, planning upper-year courses' },
+                ] as { value: 'first' | 'second' | 'third+'; title: string; sub: string }[]).map(({ value, title, sub }) => (
+                  <button key={v
