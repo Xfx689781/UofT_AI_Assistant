@@ -146,9 +146,9 @@ const LEARNING_STYLES = [
 
 export const defaultOnboardingData: OnboardingData = {
   name: '', yearType: '', admissionCategory: '',
-  coursesTaken: [], interests: [], goalsFirstYear: '',
+  coursesTaken: [] as string[], interests: [] as string[], goalsFirstYear: '',
   programCategory: '', programOfStudy: '', programOther: '',
-  coursesCompleted: [], goalsSecondYear: '', futureDirection: '',
+  coursesCompleted: [] as string[], goalsSecondYear: '', futureDirection: '',
   learningStyle: '', studyHoursPerWeek: '', examPreference: '',
   officeHoursImportance: '', communicationPreference: '',
   selfAssessment: '', shortAnswer: '', professorPreference: '',
