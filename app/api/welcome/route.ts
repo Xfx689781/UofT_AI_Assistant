@@ -37,8 +37,8 @@ export async function POST(req: Request) {
     const yearLabel = yearType === 'first' ? 'First Year' : yearType === 'second' ? 'Second Year' : 'Third or Fourth Year'
 
     const logicParts: string[] = []
-    if (hasMat157 && isSpecialist && isGradSchool) logicParts.push('PUSH HARD: MAT257 MAT240 MAT267 STA257 MAT315 MAT327')
-    else if (hasMat157) logicParts.push('MAT257 MAT240 STA257 cross into CS or Stats')
+    if (hasMat157 && isSpecialist && isGradSchool) logicParts.push('PUSH HARD: MAT257 MAT267 STA257 MAT357 MAT347 MAT367 MAT327')
+    else if (hasMat157) logicParts.push('MAT237 MAT244 MAT301 STA261 STA257 cross into CS or Stats')
     if (hasMat137 && !hasMat237 && isMath) logicParts.push('MAT237 MAT246 MAT240 are immediate next steps')
     if (isCS && !isHighCapacity) logicParts.push('CSC263 CSC209 CSC369 CSC343 based on prereqs')
     if (isCS && isHighCapacity) logicParts.push('CSC263 CSC369 CSC373 CSC311 consider MAT337 for theory depth')
