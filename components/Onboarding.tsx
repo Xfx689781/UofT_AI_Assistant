@@ -547,3 +547,17 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
             <button type="button" onClick={goBack} disabled={isFirst}
               className="px-4 py-2 rounded-lg text-[#8b9aad] hover:text-white disabled:opacity-0 transition-colors"
             >Back</button>
+            </div>
+        </div>
+
+        <p className="mt-4 text-center text-[#6b7a8d] text-xs">
+          Your answers are stored locally and never shared.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+
+
+  
