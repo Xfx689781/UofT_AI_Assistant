@@ -14,7 +14,7 @@ export interface OnboardingData {
   programOther: string
   coursesCompleted: string[]
   goalsSecondYear: string
-  futureDirection: string[]
+  futureDirection: string
   learningStyle: string
   studyHoursPerWeek: string
   examPreference: string
