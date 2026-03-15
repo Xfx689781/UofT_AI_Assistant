@@ -470,7 +470,7 @@ export async function POST(req: Request) {
   'industry-swe': 'Direction: Software Engineering / Industry. Key practical courses: CSC343H1, CSC369H1, CSC209H1, CSC458H1, CSC316H1, CSC318H1. Focus on applied and systems courses.',
   'other': 'Direction: Undecided / Broad. Build a balanced plan mixing different fields of courses based on interests. Use short answer as primary guide.',
 }
-    }
+    
     const futureDirectionContext = futureDirection ? 'FUTURE DIRECTION: ' + futureDirection + '\n' + (futureDirectionMap[futureDirection] || '') : ''
 
     const systemPrompt = [
