@@ -451,28 +451,8 @@ export async function POST(req: Request) {
       'CSC486H1 needs CSC384H1',
       'CSC469H1 needs CSC369H1',
     ].join('\n')
-
-    const futureDirectionMap: Record<string, string> = {
-  'ml-ai': 'Direction: Machine Learning / AI. Key upper courses to work toward (if prereqs met): CSC311H1, CSC412H1, CSC413H1, CSC486H1, STA314H1, STA414H1, CSC384H1, CSC320H1, CSC420H1. Check completed flags to see what is already done and what is next.',
-  'systems': 'Direction: Systems / Low-Level. Key upper courses: CSC369H1, CSC458H1, CSC469H1, CSC373H1, CSC473H1, CSC448H1. Check what is completed and build from there.',
-  'theory-cs': 'Direction: Theory of CS. Key upper courses: CSC373H1, CSC448H1, CSC463H1, CSC473H1, APM461H1, MAT309H1, MAT344H1. Strong students should also consider MAT315H1 and MAT401H1.',
-  'vision-graphics': 'Direction: Vision / Graphics. Key upper courses: CSC420H1, CSC317H1, CSC412H1. Needs MAT237Y1 and MAT223H1 as prereqs.',
-  'nlp': 'Direction: NLP. Key upper courses: CSC401H1, CSC485H1, CSC311H1, CSC412H1, CSC413H1.',
-  'pure-math': 'Direction: Pure Mathematics. Key upper courses depending on what is completed: MAT347Y1, MAT327H1, MAT354H1, MAT357H1, MAT337H1, MAT301H1, MAT315H1. At 4th year level: MAT415H1, MAT425H1, MAT445H1, MAT448H1, MAT454H1, MAT457H1, MAT458H1, MAT475H1. Push 400-level aggressively for strong students.',
-  'analysis': 'Direction: Analysis / PDE. Key courses: MAT337H1, MAT354H1, MAT357H1, APM346H1. At advanced level: MAT454H1, MAT457H1, MAT458H1, APM446H1. Build on whatever analysis courses are already completed.',
-  'algebra': 'Direction: Algebra. Key courses: MAT240H1, MAT247H1, MAT301H1. At advanced level: MAT347Y1, MAT401H1, MAT415H1, MAT445H1, MAT448H1. Build on what is completed.',
-  'stats-data': 'Direction: Statistics / Data Science. Key courses: STA302H1, STA303H1, STA304H1, STA305H1, STA313H1. Advanced: STA410H1, STA437H1, STA442H1, STA457H1. Also consider CSC343H1, CSC316H1 for data work.',
-  'quant-finance': 'Direction: Quantitative Finance. Key courses: STA347H1, STA261H1, MAT337H1, ECO358H1, STA302H1. Also STA447H1 for stochastic processes.',
-  'bio-research': 'Direction: Biology Research. Key courses: upper-year BIO, STA237H1, STA238H1, STA302H1 for research methods.',
-  'neuro': 'Direction: Neuroscience / Cog Sci. Key courses: PSY270H1, PSY230H1, PSY240H1, STA237H1, BIO230H1.',
-  'physics-research': 'Direction: Physics Research. Key courses: PHY254H1, PHY256H1, PHY350H1, PHY354H1. Build sequentially on what is completed.',
-  'grad-math': 'Direction: Math Graduate School. Push hardest possible. 400-level is the goal: MAT415H1, MAT417H1, MAT445H1, MAT448H1, MAT454H1, MAT457H1, MAT458H1, MAT464H1. Also MAT347Y1, MAT327H1, MAT357H1, MAT351H1, MAT354H1, MAT367H1 if not yet done. Do not hold back.',
-  'grad-cs': 'Direction: CS Graduate School / Research. Key courses: CSC311H1, CSC412H1, CSC413H1, CSC373H1, CSC463H1, CSC494H1. Also consider STA314H1, STA414H1 for ML research track.',
-  'industry-swe': 'Direction: Software Engineering / Industry. Key practical courses: CSC343H1, CSC369H1, CSC209H1, CSC458H1, CSC316H1, CSC318H1, CSC428H1. Focus on applied and systems courses.',
-  'other': 'Direction: Undecided / Broad. Build a balanced plan mixing different fields of courses based on interests. Use short answer as primary guide.',
-}
-    
-    const futureDirectionContext = futureDirection ? 'FUTURE DIRECTION: ' + futureDirection + '\n' + (futureDirectionMap[futureDirection] || '') : ''
+     
+    const futureDirectionContext = futureDirection ? 'STUDENT FUTURE DIRECTION (in their own words): "' + futureDirection + '"' : ''
 
     const systemPrompt = [
       'You are an expert UofT academic advisor. Build precise, personalized, and ambitious course plans.',
